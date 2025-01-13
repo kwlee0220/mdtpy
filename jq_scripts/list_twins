@@ -1,0 +1,20 @@
+#!  /bin/bash
+
+for ARGUMENT in "$@"
+do
+   KEY=$(echo $ARGUMENT | cut -f1 -d=)
+
+   KEY_LENGTH=${#KEY}
+   VALUE="${ARGUMENT:$KEY_LENGTH+1}"
+
+   export "$KEY"="$VALUE"
+done
+
+HOST="${host:-localhost}"
+PORT="${port:-12985}"
+
+if [ -z "$id" ]; then
+   curl -o - http://$HOST:$PORT/instance-manager/instance-infos 2> /dev/null
+else
+   curl -o - http://$HOST:$PORT/instance-manager/instance-infos/$id 2> /dev/null
+fi

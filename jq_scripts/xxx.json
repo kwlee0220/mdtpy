@@ -1,0 +1,124 @@
+[ {
+  "id" : "innercase",
+  "aasId" : "http://www.lg.co.kr/refrigerator/Innercase/InnercaseProcess",
+  "aasIdShort" : "InnercaseFormingProcess",
+  "status" : "STOPPED",
+  "parameters" : [ ],
+  "operations" : [ ]
+}, {
+  "id" : "heater",
+  "aasId" : "http://www.lg.co.kr/refrigerator/Innercase/Heater",
+  "aasIdShort" : "Heater",
+  "assetType" : "Machine",
+  "status" : "STOPPED",
+  "parameters" : [ ],
+  "operations" : [ ]
+}, {
+  "id" : "inspector",
+  "aasId" : "http://www.lg.co.kr/refrigerator/innercase/QualityInspector",
+  "aasIdShort" : "QualityInspector",
+  "assetType" : "Equipment",
+  "status" : "RUNNING",
+  "baseEndpoint" : "https://192.168.0.7:19009/api/v3.0",
+  "parameters" : [ {
+    "id" : "CycleTime",
+    "type" : "xs:string",
+    "value" : "12"
+  }, {
+    "id" : "DefectList",
+    "type" : "xs:string",
+    "value" : "0,0,0,0,0,0,1,1,0,0,0"
+  }, {
+    "id" : "UpperImage",
+    "contentType" : "image/jpg",
+    "value" : "",
+    "type" : "File"
+  } ],
+  "operations" : [ {
+    "id" : "ProcessSimulation",
+    "kind" : "Simulation",
+    "inputArguments" : [ {
+      "id" : "DefectList",
+      "type" : "xs:string",
+      "value" : ""
+    } ],
+    "outputArguments" : [ {
+      "id" : "AverageCycleTime",
+      "type" : "xs:string",
+      "value" : ""
+    } ]
+  }, {
+    "id" : "ThicknessInspection",
+    "kind" : "AI",
+    "inputArguments" : [ {
+      "id" : "UpperImage",
+      "contentType" : "image/jpg",
+      "value" : "",
+      "type" : "File"
+    } ],
+    "outputArguments" : [ {
+      "id" : "Defect",
+      "type" : "xs:string",
+      "value" : "0,0,0,0,0,0,0,0,0"
+    } ]
+  }, {
+    "id" : "UpdateDefectList",
+    "kind" : "AI",
+    "inputArguments" : [ {
+      "id" : "Defect",
+      "type" : "xs:string",
+      "value" : "0"
+    }, {
+      "id" : "DefectList",
+      "type" : "xs:string",
+      "value" : "0,0,0,0,0,0,1"
+    } ],
+    "outputArguments" : [ {
+      "id" : "DefectList",
+      "type" : "xs:string",
+      "value" : "0,0,0,0,0,0,1,0"
+    } ]
+  } ]
+}, {
+  "id" : "test",
+  "aasId" : "https://www.samcheon.com/mdt/Test",
+  "aasIdShort" : "Test",
+  "assetType" : "Equipment",
+  "status" : "RUNNING",
+  "baseEndpoint" : "https://192.168.0.7:19000/api/v3.0",
+  "parameters" : [ {
+    "id" : "Data",
+    "type" : "xs:int",
+    "value" : "0"
+  }, {
+    "id" : "IncAmount",
+    "type" : "xs:int",
+    "value" : "1"
+  }, {
+    "id" : "SleepTime",
+    "type" : "xs:int",
+    "value" : "3"
+  } ],
+  "operations" : [ {
+    "id" : "Simulation",
+    "kind" : "Simulation",
+    "inputArguments" : [ {
+      "id" : "Data",
+      "type" : "xs:string",
+      "value" : "0"
+    }, {
+      "id" : "IncAmount",
+      "type" : "xs:string",
+      "value" : "1"
+    }, {
+      "id" : "SleepTime",
+      "type" : "xs:string",
+      "value" : "3"
+    } ],
+    "outputArguments" : [ {
+      "id" : "Data",
+      "type" : "xs:string",
+      "value" : "0"
+    } ]
+  } ]
+} ]

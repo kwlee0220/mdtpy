@@ -1,0 +1,3644 @@
+{
+  "assetAdministrationShells": [
+    {
+      "category": "CONSTANT",
+      "idShort": "QualityInspector",
+      "administration": {
+        "version": "",
+        "revision": ""
+      },
+      "id": "http://www.lg.co.kr/refrigerator/innercase/QualityInspector",
+      "assetInformation": {
+        "assetKind": "Instance",
+        "assetType": "Machine"
+      },
+      "submodels": [
+        {
+          "type": "ModelReference",
+          "keys": [
+            {
+              "type": "Submodel",
+              "value": "http://www.lg.co.kr/refrigerator/Innercase/QualityInspector/InformationModel"
+            }
+          ]
+        },
+        {
+          "type": "ModelReference",
+          "keys": [
+            {
+              "type": "Submodel",
+              "value": "http://www.lg.co.kr/refrigerator/Innercase/QualityInspector/Data"
+            }
+          ]
+        },
+        {
+          "type": "ModelReference",
+          "keys": [
+            {
+              "type": "Submodel",
+              "value": "http://www.lg.co.kr/refrigerator/Innercase/QualityInspector/sm/ProcessSimulation"
+            }
+          ]
+        },
+        {
+          "type": "ModelReference",
+          "keys": [
+            {
+              "type": "Submodel",
+              "value": "http://www.lg.co.kr/refrigerator/Innercase/QualityInspector/AI/ThicknessInspection"
+            }
+          ]
+        },
+        {
+          "type": "ModelReference",
+          "keys": [
+            {
+              "type": "Submodel",
+              "value": "http://www.lg.co.kr/refrigerator/Innercase/QualityInspector/AI/UpdateDefectList"
+            }
+          ]
+        }
+      ],
+      "modelType": "AssetAdministrationShell"
+    }
+  ],
+  "submodels": [
+    {
+      "category": "CONSTANT",
+      "idShort": "InformationModel",
+      "administration": {
+        "version": "",
+        "revision": ""
+      },
+      "id": "http://www.lg.co.kr/refrigerator/Innercase/QualityInspector/InformationModel",
+      "kind": "Instance",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://etri.re.kr/mdt/Submodel/InformationModel/1/1"
+          }
+        ]
+      },
+      "submodelElements": [
+        {
+          "category": "",
+          "idShort": "MDTInfo",
+          "value": [
+            {
+              "category": "",
+              "idShort": "AssetName",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC790\uC0B0\uC774\uB984"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "QualityInspector",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "AssetType",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD2B8\uC708\uD654\uB300\uC0C1\uC790\uC0B0\uD0C0\uC785(Machine,Process,Line,Factory)"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "Machine",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Status",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "MDT\uBAA8\uB378\uC758\uD604\uC7AC\uC0C1\uD0DC(Created,Registered,Executed)"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "Created",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "AssetDescription",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "Purpose",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "MDT\uC0DD\uC131\uBAA9\uC801"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "CreationDate",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "MDT\uC0DD\uC131\uC77C\uC790"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "RegistrationDate",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "MDT\uD480\uB4F1\uB85D\uC77C\uC790"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "ExecutionDate",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "MDT\uC2E4\uD589\uC77C\uC790"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "category": "",
+              "idShort": "IdShort",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "URI\uB4F1\uC73C\uB85C\uD45C\uD604\uB418\uB294MDTID"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "QualityInspector",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "AsssetInformationInFactory",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "AssetIDinFactory",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uACF5\uC7A5\uC5D0\uC11C\uAD00\uB9AC\uD558\uB294\uC790\uC0B0ID"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "AssetNameInFactory",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uACF5\uC7A5\uC5D0\uC11C\uBD80\uC5EC\uD55C\uC790\uC0B0\uBA85"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "AssetLocationInFactory",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC790\uC0B0\uC704\uCE58"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "category": "",
+              "idShort": "Subject",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "MDT\uB300\uD45C\uC124\uBA85\uC8FC\uC81C\uC5B4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Description",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "MDT\uC5D0\uB300\uD55C\uC124\uBA85"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "\uB0B4\uD568\uC131\uD615\uACF5\uC815\uC758QualityInspectionEquipment\uC124\uBE44\uD2B8\uC708",
+              "modelType": "Property"
+            }
+          ],
+          "modelType": "SubmodelElementCollection"
+        }
+      ],
+      "modelType": "Submodel"
+    },
+    {
+      "category": "CONSTANT",
+      "idShort": "Data",
+      "administration": {
+        "version": "",
+        "revision": ""
+      },
+      "id": "http://www.lg.co.kr/refrigerator/Innercase/QualityInspector/Data",
+      "kind": "Instance",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://etri.re.kr/mdt/Submodel/Data/1/1"
+          }
+        ]
+      },
+      "submodelElements": [
+        {
+          "category": "",
+          "idShort": "SubModelInfo",
+          "value": [
+            {
+              "category": "",
+              "idShort": "Title",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC11C\uBE0C\uBAA8\uB378\uC774\uB984"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "Data",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Subject",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD574\uB2F9\uC124\uBE44\uB97C\uB300\uD45C\uD560\uC218\uC788\uB294\uC8FC\uC81C"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Description",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC11C\uBE0C\uBAA8\uB378\uC5D0\uB300\uD55C\uC124\uBA85"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "\uB370\uC774\uD130\uC11C\uBE0C\uBAA8\uB378",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Creator",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC790\uC6D0\uC758\uB0B4\uC6A9\uC5D0\uC8FC\uB41C\uCC45\uC784\uC744\uAC00\uC9C4\uAC1C\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "ETRI",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Contributor",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC11C\uBE0C\uBAA8\uB378\uB370\uC774\uD130\uC0DD\uC131\uC5D0\uAE30\uC5EC\uD55C\uC8FC\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Publisher",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC11C\uBE0C\uBAA8\uB378Data\uB97C\uBC30\uD3EC\uD55C\uC8FC\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Date",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC11C\uBE0C\uBAA8\uB378\uC0DD\uC131\uC77C\uC790"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Type",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378\uD0C0\uC785"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "Data",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Format",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC790\uC6D0\uC758\uBB3C\uB9AC\uC801\uD45C\uD604\uD615\uC2DD\uBC0F\uB514\uC9C0\uD138\uD45C\uD604\uD615\uC2DD"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "KSX9101",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Identifier",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC11C\uBE0C\uBAA8\uB378\uC2DD\uBCC4\uC790"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "Data",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Language",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC0AC\uC6A9\uC5B8\uC5B4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Relation",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD2B8\uC708\uC5F0\uACC4/\uC5F0\uB3D9\uBA54\uD0C0\uC815\uBCF4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Rights",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "MDTSubModelCreator\uAC00\uC815\uC758\uD55CPublisher\uAD8C\uD55C(CRUD)"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Source",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378Data\uAC00\uCC38\uC870/\uC5F0\uB3D9\uD55C\uC815\uBCF4\uC18C\uC2A4\uC8FC\uC18C"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Coverage",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378Data\uC758\uC81C\uD55C\uBC0F\uC5F0\uB3D9\uC801\uC6A9\uBC94\uC704"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "ReferenceAddress",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "DockerImageID",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uB370\uC774\uD130\uBAA8\uB378\uC744\uCEE8\uD14C\uC774\uB108\uD654\uD55C\uB3C4\uCEE4\uC774\uBBF8\uC9C0\uC8FC\uC18C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "Address",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uB370\uC774\uD130\uC811\uADFCDB\uC8FC\uC18C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            }
+          ],
+          "modelType": "SubmodelElementCollection"
+        },
+        {
+          "category": "",
+          "idShort": "DataInfo",
+          "value": [
+            {
+              "category": "",
+              "idShort": "Equipment",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "EquipmentID",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC124\uBE44\uC2DD\uBCC4\uC790"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "QualityInspectionEquipment",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "EquipmentName",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC124\uBE44\uBA85"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "QualityInspectionEquipment",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "ParentEquipmentID",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC0C1\uC704\uC124\uBE44\uC2DD\uBCC4\uC790"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "EquipmentType",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC124\uBE44\uC720\uD615"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "EquipmentLargeClass",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC124\uBE44\uB300\uBD84\uB958(\uD68C\uC0AC\uAE30\uC900\uBD84\uB958\uCCB4\uACC4)"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "EquipmentMediumClass",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC124\uBE44\uC911\uBD84\uB958(\uD68C\uC0AC\uAE30\uC900\uBD84\uB958\uCCB4\uACC4)"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "EquipmentSmallClass",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC124\uBE44\uC18C\uBD84\uB958(\uD68C\uC0AC\uAE30\uC900\uBD84\uB958\uCCB4\uACC4)"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "UseIndicator",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC0AC\uC6A9\uC5EC\uBD80"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "DAQDevice",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uB370\uC774\uD130\uC218\uC9D1\uC7A5\uCE58(\uC7A5\uCE58\uACE0\uC720\uBC88\uD638)"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "FixedAssetID",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uACE0\uC815\uC790\uC0B0\uC2DD\uBCC4\uC790(\uC790\uC0B0\uACE0\uC720\uBC88\uD638)"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "ModelNumber",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uBAA8\uB378\uBC88\uD638"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "SerialNumber",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC77C\uB828\uBC88\uD638"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "CountryOfOrigin",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC81C\uC870\uAD6D\uAC00"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "Manufacturer",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC81C\uC870\uC5C5\uCCB4"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "AcquisitionDate",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uCDE8\uB4DD\uC77C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "Location",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC704\uCE58"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "DepartmentInChargeID",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uAD00\uB9AC\uBD80\uC11C\uC2DD\uBCC4\uC790"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "PersonInChargeID",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uAD00\uB9AC\uC790\uC2DD\uBCC4\uC790"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "OperatorID",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC791\uC5C5\uC790ID"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "EquipmentParameters",
+                  "orderRelevant": false,
+                  "typeValueListElement": "SubmodelElement",
+                  "value": [
+                    {
+                      "category": "",
+                      "idShort": "CycleTime",
+                      "value": [
+                        {
+                          "category": "",
+                          "idShort": "ParameterID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "CycleTime",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterName",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uBA85"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "CycleTime",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterType",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uC720\uD615"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "float",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterGrade",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uB4F1\uAE09"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterUOMCode",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uB2E8\uC704\uCF54\uB4DC"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "EquipmentID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC124\uBE44\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "LSL",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uADDC\uACA9\uD558\uD55C"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "USL",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uADDC\uACA9\uC0C1\uD55C"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "PeriodicDataCollectionIndicator",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC8FC\uAE30\uC801\uC218\uC9D1\uC5EC\uBD80"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "DataCollectionPeriod",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC218\uC9D1\uC8FC\uAE30"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        }
+                      ],
+                      "modelType": "SubmodelElementCollection"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "DefectList",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uACF5\uC815\uD30C\uB77C\uBA54\uD0C0"
+                        }
+                      ],
+                      "value": [
+                        {
+                          "category": "",
+                          "idShort": "ParameterID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "DefectList",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterName",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uBA85"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "DefectList",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterType",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uC720\uD615"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "string",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterGrade",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uB4F1\uAE09"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterUOMCode",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uB2E8\uC704\uCF54\uB4DC"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "OperationID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC124\uBE44\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "LSL",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uADDC\uACA9\uD558\uD55C"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "USL",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uADDC\uACA9\uC0C1\uD55C"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "PeriodicDataCollectionIndicator",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC8FC\uAE30\uC801\uC218\uC9D1\uC5EC\uBD80"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "DataCollectionPeriod",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC218\uC9D1\uC8FC\uAE30"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "EventDateTime",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC774\uBCA4\uD2B8\uBC1C\uC0DD\uC2DC\uAC04"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterValue",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uAC12"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ValidationResultCode",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uAC80\uC99D\uACB0\uACFC\uCF54\uB4DC"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        }
+                      ],
+                      "modelType": "SubmodelElementCollection"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uACF5\uC815\uD30C\uB77C\uBA54\uD0C0"
+                        }
+                      ],
+                      "value": [
+                        {
+                          "category": "",
+                          "idShort": "ParameterID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "UpperImage",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterName",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uBA85"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "UpperIlluminanceImage",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterType",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uC720\uD615"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "file",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterGrade",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uB4F1\uAE09"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterUOMCode",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uB2E8\uC704\uCF54\uB4DC"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "OperationID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC124\uBE44\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "LSL",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uADDC\uACA9\uD558\uD55C"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "USL",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uADDC\uACA9\uC0C1\uD55C"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "PeriodicDataCollectionIndicator",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC8FC\uAE30\uC801\uC218\uC9D1\uC5EC\uBD80"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "DataCollectionPeriod",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC218\uC9D1\uC8FC\uAE30"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "EventDateTime",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC774\uBCA4\uD2B8\uBC1C\uC0DD\uC2DC\uAC04"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterValue",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uAC12"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ValidationResultCode",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uAC80\uC99D\uACB0\uACFC\uCF54\uB4DC"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        }
+                      ],
+                      "modelType": "SubmodelElementCollection"
+                    }
+                  ],
+                  "modelType": "SubmodelElementList"
+                },
+                {
+                  "category": "",
+                  "idShort": "EquipmentParameterValues",
+                  "orderRelevant": false,
+                  "typeValueListElement": "SubmodelElement",
+                  "value": [
+                    {
+                      "category": "",
+                      "idShort": "",
+                      "semanticId": {
+                        "type": "ExternalReference",
+                        "keys": [
+                          {
+                            "type": "GlobalReference",
+                            "value": "https://etri.re.kr/mdt/Submodel/Data/ParameterValue/1/1"
+                          }
+                        ]
+                      },
+                      "value": [
+                        {
+                          "category": "",
+                          "idShort": "EquipmentID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC124\uBE44\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "QualityInspector",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "CycleTime",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "EventDateTime",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC774\uBCA4\uD2B8\uBC1C\uC0DD\uC2DC\uAC04"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterUOMCode",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uB2E8\uC704\uCF54\uB4DC"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterValue",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uAC12"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "12",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ValidationResultCode",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uAC80\uC99D\uACB0\uACFC\uCF54\uB4DC"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        }
+                      ],
+                      "modelType": "SubmodelElementCollection"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "",
+                      "semanticId": {
+                        "type": "ExternalReference",
+                        "keys": [
+                          {
+                            "type": "GlobalReference",
+                            "value": "https://etri.re.kr/mdt/Submodel/Data/ParameterValue/1/1"
+                          }
+                        ]
+                      },
+                      "value": [
+                        {
+                          "category": "",
+                          "idShort": "EquipmentID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC124\uBE44\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "QualityInspector",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "DefectList",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "EventDateTime",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC774\uBCA4\uD2B8\uBC1C\uC0DD\uC2DC\uAC04"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterUOMCode",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uB2E8\uC704\uCF54\uB4DC"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterValue",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uAC12"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "0,0,0,0,0,0,1,1,0,0,0",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ValidationResultCode",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uAC80\uC99D\uACB0\uACFC\uCF54\uB4DC"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        }
+                      ],
+                      "modelType": "SubmodelElementCollection"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "",
+                      "semanticId": {
+                        "type": "ExternalReference",
+                        "keys": [
+                          {
+                            "type": "GlobalReference",
+                            "value": "https://etri.re.kr/mdt/Submodel/Data/ParameterValue/1/1"
+                          }
+                        ]
+                      },
+                      "value": [
+                        {
+                          "category": "",
+                          "idShort": "EquipmentID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC124\uBE44\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "QualityInspector",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterID",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uC2DD\uBCC4\uC790"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "UpperImage",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "EventDateTime",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uC774\uBCA4\uD2B8\uBC1C\uC0DD\uC2DC\uAC04"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterUOMCode",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uD30C\uB77C\uBBF8\uD130\uB2E8\uC704\uCF54\uB4DC"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ValidationResultCode",
+                          "description": [
+                            {
+                              "language": "Korean",
+                              "text": "\uAC80\uC99D\uACB0\uACFC\uCF54\uB4DC"
+                            }
+                          ],
+                          "valueType": "xs:string",
+                          "value": "",
+                          "modelType": "Property"
+                        },
+                        {
+                          "category": "",
+                          "idShort": "ParameterValue",
+                          "value": "",
+                          "contentType": "image/jpg",
+                          "modelType": "File"
+                        }
+                      ],
+                      "modelType": "SubmodelElementCollection"
+                    }
+                  ],
+                  "modelType": "SubmodelElementList"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            }
+          ],
+          "modelType": "SubmodelElementCollection"
+        }
+      ],
+      "modelType": "Submodel"
+    },
+    {
+      "category": "CONSTANT",
+      "idShort": "ProcessSimulation",
+      "description": [
+        {
+          "language": "Korean",
+          "text": "Simulationsubmodeltemplate"
+        }
+      ],
+      "administration": {
+        "version": "",
+        "revision": ""
+      },
+      "id": "http://www.lg.co.kr/refrigerator/Innercase/QualityInspector/sm/ProcessSimulation",
+      "kind": "Instance",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://etri.re.kr/mdt/Submodel/Simulation/1/1"
+          }
+        ]
+      },
+      "submodelElements": [
+        {
+          "category": "",
+          "idShort": "SubModelInfo",
+          "value": [
+            {
+              "category": "",
+              "idShort": "Title",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD574\uB2F9\uC790\uC0B0\uC5D0\uB300\uD55C\uC2DC\uBBAC\uB808\uC774\uC158\uBAA8\uB378\uC758\uC81C\uBAA9"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "Innercase-Line-Process-Analysis-Simulation-Model",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Creator",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378\uC2DC\uBBAC\uB808\uC774\uC158\uC744\uC0DD\uC131\uD55C\uC8FC\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "SKKU-Lim",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Subject",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378\uC2DC\uBBAC\uB808\uC774\uC158\uC744\uB300\uD45C\uD558\uB294\uC8FC\uC694\uD0A4\uC6CC\uB4DC"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Description",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC81C\uBAA9\uC744\uD480\uC5B4\uC11C\uAE30\uC220\uD55C\uC124\uBA85"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Contributor",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378\uC2DC\uBBAC\uB808\uC774\uC158\uC0DD\uC131\uC5D0\uAE30\uC5EC\uD55C\uC8FC\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Publisher",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378\uC2DC\uBBAC\uB808\uC774\uC158\uC744\uBC30\uD3EC\uD55C\uC8FC\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Date",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378\uC2DC\uBBAC\uB808\uC774\uC158\uC0DD\uC131\uC77C\uC790"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Type",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378\uD0C0\uC785"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "Simulation",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Format",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378\uC2DC\uBBAC\uB808\uC774\uC158\uD30C\uC77C\uD3EC\uBA67(\uD655\uC7A5\uC790)"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "psz",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Identifier",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378\uC2DD\uBCC4\uC790"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "ProcessSimulation",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Language",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC0AC\uC6A9\uC5B8\uC5B4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Relation",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD2B8\uC708\uC5F0\uACC4/\uC5F0\uB3D9\uC744\uC704\uD55C\uBA54\uD0C0\uC815\uBCF4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Rights",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "MDTSubModelCreator\uAC00\uC815\uC758\uD55CPublisher\uAD8C\uD55C(CRUD)"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Source",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378\uC2DC\uBBAC\uB808\uC774\uC158\uC774\uCC38\uC870/\uC5F0\uB3D9\uD55C\uC815\uBCF4\uC18C\uC2A4\uC8FC\uC18C"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Coverage",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80\uBAA8\uB378\uC2DC\uBBAC\uB808\uC774\uC158\uC758\uC81C\uD55C\uBC0F\uC5F0\uB3D9\uC801\uC6A9\uBC94\uC704"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "ReferenceAddress",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "DockerImageID",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC2DC\uBBAC\uB808\uC774\uC158\uBAA8\uB378\uC744\uCEE8\uD14C\uC774\uB108\uD654\uD55C\uB3C4\uCEE4\uC774\uBBF8\uC9C0\uC8FC\uC18C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "Address",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC2DC\uBBAC\uB808\uC774\uC158\uBAA8\uB378\uC774\uC800\uC7A5\uB41CDB\uC8FC\uC18C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            }
+          ],
+          "modelType": "SubmodelElementCollection"
+        },
+        {
+          "category": "",
+          "idShort": "SimulationInfo",
+          "value": [
+            {
+              "category": "",
+              "idShort": "Model",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "ModelFileType",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "FMI\uC5D0\uB530\uB978FMU\uC758\uD615\uC2DD\uB4F1\uC758\uC815\uBCF4\uC81C\uACF5"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "ModelFileVersion",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uBC84\uC804\uC744\uAD6C\uBD84\uD560\uC218\uC788\uB294\uC815\uBCF4\uC640\uD568\uAED8\uC2DC\uBBAC\uB808\uC774\uC158\uBAA8\uB378\uC758\uBC84\uC804\uC744\uC81C\uACF5"
+                    }
+                  ],
+                  "value": [
+                    {
+                      "category": "",
+                      "idShort": "ModelVersionId",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uBAA8\uB378\uBC84\uC804\uBC88\uD638(URIoridShort)"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "MDT/Process/SubModel/Simulation/SimulationInfo/ModelVersionId/0.1",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "ModelPreviewImage",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC0AC\uC6A9\uC790\uC778\uD130\uD398\uC774\uC2A4\uC5D0\uC11C\uBAA8\uB378\uC744\uB098\uD0C0\uB0B4\uB294\uC774\uBBF8\uC9C0\uD30C\uC77C"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "DigitalFile",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uBAA8\uB378\uD30C\uC77C(*.fmu,*.smd,*.spp,*.alp,*.nlogo)"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "LGE_CW_Innercase01_ProcessSimulateModel_v0.1",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "ModelFileReleaseNotesTxt",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uB9B4\uB9AC\uC2A4\uC5D0\uB300\uD55C\uC815\uBCF4"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "ModelFileReleaseNotesFile",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uB9B4\uB9AC\uC2A4\uC5D0\uB300\uD55C\uC815\uBCF4\uD30C\uC77C"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "",
+                      "modelType": "Property"
+                    }
+                  ],
+                  "modelType": "SubmodelElementCollection"
+                },
+                {
+                  "idShort": "LastExecutionTime",
+                  "valueType": "xs:duration",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "category": "",
+              "idShort": "MinResourceRequirements",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "GPUSpec",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC2E4\uD589\uC744\uC704\uD55CGPU\uC790\uC6D0"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "GPUNum",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "GPU\uC218"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "CPUSpec",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC2E4\uD589\uC744\uC704\uD55CCPU\uC790\uC6D0"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "CPUNum",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "CPU\uC218"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "MemorySize",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uBA54\uBAA8\uB9AC\uD06C\uAE30"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "MemorySpeed",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uBA54\uBAA8\uB9AC\uC18D\uB3C4"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "idShort": "SimulationTool",
+              "value": [
+                {
+                  "idShort": "SimToolName",
+                  "valueType": "xs:string",
+                  "value": "TecnomatixProcessSimulate2206",
+                  "modelType": "Property"
+                },
+                {
+                  "idShort": "OperatingSyatem",
+                  "valueType": "xs:string",
+                  "value": "Windows",
+                  "modelType": "Property"
+                },
+                {
+                  "idShort": "LicenseModel",
+                  "valueType": "xs:string",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "idShort": "Inputs",
+              "orderRelevant": false,
+              "typeValueListElement": "SubmodelElement",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "",
+                  "semanticId": {
+                    "type": "ExternalReference",
+                    "keys": [
+                      {
+                        "type": "GlobalReference",
+                        "value": "https://etri.re.kr/mdt/Submodel/Operation/Input/1/1"
+                      }
+                    ]
+                  },
+                  "value": [
+                    {
+                      "category": "",
+                      "idShort": "InputID",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12ID(idShort)"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "DefectList",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputName",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12\uC774\uB984"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "DefectList",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputValue",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputType",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12\uD615\uD0DC"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "string",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputOption",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12\uC635\uC158"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputDescription",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12\uC5D0\uB300\uD55C\uC124\uBA85"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "",
+                      "modelType": "Property"
+                    }
+                  ],
+                  "modelType": "SubmodelElementCollection"
+                }
+              ],
+              "modelType": "SubmodelElementList"
+            },
+            {
+              "idShort": "Outputs",
+              "orderRelevant": false,
+              "typeValueListElement": "SubmodelElement",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "",
+                  "semanticId": {
+                    "type": "ExternalReference",
+                    "keys": [
+                      {
+                        "type": "GlobalReference",
+                        "value": "https://etri.re.kr/mdt/Submodel/Operation/Output/1/1"
+                      }
+                    ]
+                  },
+                  "value": [
+                    {
+                      "category": "",
+                      "idShort": "OutputID",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12ID"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "AverageCycleTime",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "OutputName",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12\uC774\uB984"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "AverageCycleTime",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "OutputValue",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "OutputType",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12\uD615\uD0DC"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "number",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "OutputOption",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12\uC5D0\uB300\uD55C\uC124\uBA85"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "OutputDescription",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12\uC5D0\uB300\uD55C\uC124\uBA85"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "",
+                      "modelType": "Property"
+                    }
+                  ],
+                  "modelType": "SubmodelElementCollection"
+                }
+              ],
+              "modelType": "SubmodelElementList"
+            }
+          ],
+          "modelType": "SubmodelElementCollection"
+        }
+      ],
+      "modelType": "Submodel"
+    },
+    {
+      "category": "CONSTANT",
+      "idShort": "ThicknessInspection",
+      "description": [
+        {
+          "language": "Korean",
+          "text": "AI submodel template"
+        }
+      ],
+      "administration": {
+        "version": "",
+        "revision": ""
+      },
+      "id": "http://www.lg.co.kr/refrigerator/Innercase/QualityInspector/AI/ThicknessInspection",
+      "kind": "Instance",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://etri.re.kr/mdt/Submodel/AI/1/1"
+          }
+        ]
+      },
+      "submodelElements": [
+        {
+          "category": "",
+          "idShort": "SubModelInfo",
+          "value": [
+            {
+              "category": "",
+              "idShort": "Title",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD574\uB2F9 \uC790\uC0B0\uC5D0 \uB300\uD55C \uD559\uC2B5 \uBAA8\uB378\uC758 \uC81C\uBAA9"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "ThicknessInspection",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Creator",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI\uB97C \uC0DD\uC131\uD55C  \uC8FC\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Subject",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI\uB97C \uB300\uD45C\uD558\uB294 \uC8FC\uC694 \uD0A4\uC6CC\uB4DC"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Description",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC81C\uBAA9\uC744 \uD480\uC5B4\uC11C \uAE30\uC220\uD55C \uC124\uBA85"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "AI \uC11C\uBE0C\uBAA8\uB378",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Contributor",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI \uC0DD\uC131\uC5D0 \uAE30\uC5EC\uD55C \uC8FC\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Publisher",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI\uB97C \uBC30\uD3EC\uD55C \uC8FC\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Date",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI \uC0DD\uC131 \uC77C\uC790"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Type",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 \uD0C0\uC785"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "AI",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Format",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI \uD30C\uC77C \uD3EC\uB9F7(\uD655\uC7A5\uC790)"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Identifier",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 \uC2DD\uBCC4\uC790"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Language",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC0AC\uC6A9 \uC5B8\uC5B4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Relation",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD2B8\uC708 \uC5F0\uACC4/\uC5F0\uB3D9\uC744 \uC704\uD55C \uBA54\uD0C0 \uC815\uBCF4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Rights",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "MDT SubModel Creator\uAC00 \uC815\uC758\uD55C Publisher \uAD8C\uD55C (CRUD)"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Source",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI\uAC00 \uCC38\uC870/\uC5F0\uB3D9\uD55C \uC815\uBCF4 \uC18C\uC2A4 \uC8FC\uC18C"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Coverage",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI\uC758 \uC81C\uD55C \uBC0F \uC5F0\uB3D9 \uC801\uC6A9 \uBC94\uC704"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "ReferenceAddress",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "DockerImageID",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "AI \uBAA8\uB378\uC744 \uCEE8\uD14C\uC774\uB108\uD654 \uD55C \uB3C4\uCEE4 \uC774\uBBF8\uC9C0 \uC8FC\uC18C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "Address",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "AI\uBAA8\uB378\uC774 \uC800\uC7A5\uB41C \uD30C\uC77C \uB610\uB294 DB \uC8FC\uC18C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            }
+          ],
+          "modelType": "SubmodelElementCollection"
+        },
+        {
+          "category": "",
+          "idShort": "AIInfo",
+          "value": [
+            {
+              "category": "",
+              "idShort": "Model",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "LearningMethod",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uD559\uC2B5 \uBAA8\uB378 \uD0C0\uC785"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "AIModelType",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uD559\uC2B5 \uBAA8\uB378 \uC885\uB958"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "AIFramework",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC0AC\uC6A9\uB41C \uB525\uB7EC\uB2DD \uD504\uB808\uC784\uC6CC\uD06C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "ModelDescription",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uD559\uC2B5 \uBAA8\uB378 \uC124\uBA85"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "idShort": "LastExecutionTime",
+                  "valueType": "xs:duration",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "category": "",
+              "idShort": "MinResourceRequirements",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "GPUSpec",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC2E4\uD589\uC744 \uC704\uD55C GPU \uC790\uC6D0"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "GPUNum",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC2E4\uD589\uC744 \uC704\uD55C CPU \uC790\uC6D0"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "CPUSpec",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "CPU \uC2A4\uD399"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "CPUNum",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "CPU \uC218"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "MemorySize",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uBA54\uBAA8\uB9AC \uD06C\uAE30"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "category": "",
+              "idShort": "TrainingHistory",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "LastModel",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uCD5C\uC885 \uBAA8\uB378 \uC774\uB984"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "LastTrainDate",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uCD5C\uC885 \uD559\uC2B5 \uC77C\uC790"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "category": "",
+              "idShort": "EvaluationModels",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "EvaluationModel",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uBAA8\uB378 \uD3C9\uAC00 \uC9C0\uD45C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "EvaluationScore",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uD3C9\uAC00\uC9C0\uD45C \uB300\uC751 \uD559\uC2B5 \uC815\uD655\uB3C4"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "category": "",
+              "idShort": "Inputs",
+              "orderRelevant": true,
+              "typeValueListElement": "SubmodelElement",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "",
+                  "semanticId": {
+                    "type": "ExternalReference",
+                    "keys": [
+                      {
+                        "type": "GlobalReference",
+                        "value": "https://etri.re.kr/mdt/Submodel/Operation/Input/1/1"
+                      }
+                    ]
+                  },
+                  "value": [
+                    {
+                      "category": "",
+                      "idShort": "InputID",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12 ID (idShort)"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "UpperImage",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputName",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12 \uC774\uB984"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "Upper Image",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputValue",
+                      "value": "",
+                      "contentType": "image/jpg",
+                      "modelType": "File"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputType",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12 \uD615\uD0DC"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "file",
+                      "modelType": "Property"
+                    }
+                  ],
+                  "modelType": "SubmodelElementCollection"
+                }
+              ],
+              "modelType": "SubmodelElementList"
+            },
+            {
+              "category": "",
+              "idShort": "Outputs",
+              "orderRelevant": true,
+              "typeValueListElement": "SubmodelElement",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "",
+                  "semanticId": {
+                    "type": "ExternalReference",
+                    "keys": [
+                      {
+                        "type": "GlobalReference",
+                        "value": "https://etri.re.kr/mdt/Submodel/Operation/Output/1/1"
+                      }
+                    ]
+                  },
+                  "value": [
+                    {
+                      "category": "",
+                      "idShort": "OutputID",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12 ID"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "Defect",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "OutputName",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12 \uC774\uB984"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "Defect",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "OutputValue",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "0,0,0,0,0,0,0,0,0",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "OutputType",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12 \uD615\uD0DC"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "string",
+                      "modelType": "Property"
+                    }
+                  ],
+                  "modelType": "SubmodelElementCollection"
+                }
+              ],
+              "modelType": "SubmodelElementList"
+            }
+          ],
+          "modelType": "SubmodelElementCollection"
+        },
+        {
+          "idShort": "Operation",
+          "inputVariables": [
+            {
+              "value": {
+                "idShort": "UpperImage",
+                "contentType": "image/jpeg",
+                "modelType": "File"
+              }
+            }
+          ],
+          "outputVariables": [
+            {
+              "value": {
+                "idShort": "Defect",
+                "valueType": "xs:string",
+                "value": "0,0,0,0,0,0,0,0,0",
+                "modelType": "Property"
+              }
+            }
+          ],
+          "modelType": "Operation"
+        }
+      ],
+      "modelType": "Submodel"
+    },
+    {
+      "category": "CONSTANT",
+      "idShort": "UpdateDefectList",
+      "description": [
+        {
+          "language": "Korean",
+          "text": "AI submodel template"
+        }
+      ],
+      "administration": {
+        "version": "",
+        "revision": ""
+      },
+      "id": "http://www.lg.co.kr/refrigerator/Innercase/QualityInspector/AI/UpdateDefectList",
+      "kind": "Instance",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://etri.re.kr/mdt/Submodel/AI/1/1"
+          }
+        ]
+      },
+      "submodelElements": [
+        {
+          "category": "",
+          "idShort": "SubModelInfo",
+          "value": [
+            {
+              "category": "",
+              "idShort": "Title",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD574\uB2F9 \uC790\uC0B0\uC5D0 \uB300\uD55C \uD559\uC2B5 \uBAA8\uB378\uC758 \uC81C\uBAA9"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "UpdateDetecList",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Creator",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI\uB97C \uC0DD\uC131\uD55C  \uC8FC\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Subject",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI\uB97C \uB300\uD45C\uD558\uB294 \uC8FC\uC694 \uD0A4\uC6CC\uB4DC"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Description",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC81C\uBAA9\uC744 \uD480\uC5B4\uC11C \uAE30\uC220\uD55C \uC124\uBA85"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "AI \uC11C\uBE0C\uBAA8\uB378",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Contributor",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI \uC0DD\uC131\uC5D0 \uAE30\uC5EC\uD55C \uC8FC\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Publisher",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI\uB97C \uBC30\uD3EC\uD55C \uC8FC\uCCB4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Date",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI \uC0DD\uC131 \uC77C\uC790"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Type",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 \uD0C0\uC785"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "AI",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Format",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI \uD30C\uC77C \uD3EC\uB9F7(\uD655\uC7A5\uC790)"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Identifier",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 \uC2DD\uBCC4\uC790"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Language",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uC0AC\uC6A9 \uC5B8\uC5B4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Relation",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD2B8\uC708 \uC5F0\uACC4/\uC5F0\uB3D9\uC744 \uC704\uD55C \uBA54\uD0C0 \uC815\uBCF4"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Rights",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "MDT SubModel Creator\uAC00 \uC815\uC758\uD55C Publisher \uAD8C\uD55C (CRUD)"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Source",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI\uAC00 \uCC38\uC870/\uC5F0\uB3D9\uD55C \uC815\uBCF4 \uC18C\uC2A4 \uC8FC\uC18C"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "Coverage",
+              "description": [
+                {
+                  "language": "Korean",
+                  "text": "\uD558\uBD80 \uBAA8\uB378 AI\uC758 \uC81C\uD55C \uBC0F \uC5F0\uB3D9 \uC801\uC6A9 \uBC94\uC704"
+                }
+              ],
+              "valueType": "xs:string",
+              "value": "",
+              "modelType": "Property"
+            },
+            {
+              "category": "",
+              "idShort": "ReferenceAddress",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "DockerImageID",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "AI \uBAA8\uB378\uC744 \uCEE8\uD14C\uC774\uB108\uD654 \uD55C \uB3C4\uCEE4 \uC774\uBBF8\uC9C0 \uC8FC\uC18C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "Address",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "AI\uBAA8\uB378\uC774 \uC800\uC7A5\uB41C \uD30C\uC77C \uB610\uB294 DB \uC8FC\uC18C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            }
+          ],
+          "modelType": "SubmodelElementCollection"
+        },
+        {
+          "category": "",
+          "idShort": "AIInfo",
+          "value": [
+            {
+              "category": "",
+              "idShort": "Model",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "LearningMethod",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uD559\uC2B5 \uBAA8\uB378 \uD0C0\uC785"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "AIModelType",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uD559\uC2B5 \uBAA8\uB378 \uC885\uB958"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "AIFramework",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC0AC\uC6A9\uB41C \uB525\uB7EC\uB2DD \uD504\uB808\uC784\uC6CC\uD06C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "ModelDescription",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uD559\uC2B5 \uBAA8\uB378 \uC124\uBA85"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "idShort": "LastExecutionTime",
+                  "valueType": "xs:duration",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "category": "",
+              "idShort": "MinResourceRequirements",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "GPUSpec",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC2E4\uD589\uC744 \uC704\uD55C GPU \uC790\uC6D0"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "GPUNum",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uC2E4\uD589\uC744 \uC704\uD55C CPU \uC790\uC6D0"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "CPUSpec",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "CPU \uC2A4\uD399"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "CPUNum",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "CPU \uC218"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "MemorySize",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uBA54\uBAA8\uB9AC \uD06C\uAE30"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "category": "",
+              "idShort": "TrainingHistory",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "LastModel",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uCD5C\uC885 \uBAA8\uB378 \uC774\uB984"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "LastTrainDate",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uCD5C\uC885 \uD559\uC2B5 \uC77C\uC790"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "category": "",
+              "idShort": "EvaluationModels",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "EvaluationModel",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uBAA8\uB378 \uD3C9\uAC00 \uC9C0\uD45C"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                },
+                {
+                  "category": "",
+                  "idShort": "EvaluationScore",
+                  "description": [
+                    {
+                      "language": "Korean",
+                      "text": "\uD3C9\uAC00\uC9C0\uD45C \uB300\uC751 \uD559\uC2B5 \uC815\uD655\uB3C4"
+                    }
+                  ],
+                  "valueType": "xs:string",
+                  "value": "",
+                  "modelType": "Property"
+                }
+              ],
+              "modelType": "SubmodelElementCollection"
+            },
+            {
+              "category": "",
+              "idShort": "Inputs",
+              "orderRelevant": true,
+              "typeValueListElement": "SubmodelElement",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "",
+                  "semanticId": {
+                    "type": "ExternalReference",
+                    "keys": [
+                      {
+                        "type": "GlobalReference",
+                        "value": "https://etri.re.kr/mdt/Submodel/Operation/Input/1/1"
+                      }
+                    ]
+                  },
+                  "value": [
+                    {
+                      "category": "",
+                      "idShort": "InputID",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12 ID (idShort)"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "Defect",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputName",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12 \uC774\uB984"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "Defect",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputValue",
+                      "valueType": "xs:string",
+                      "value": "0",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputType",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12 \uD615\uD0DC"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "integer",
+                      "modelType": "Property"
+                    }
+                  ],
+                  "modelType": "SubmodelElementCollection"
+                },
+                {
+                  "category": "",
+                  "idShort": "",
+                  "semanticId": {
+                    "type": "ExternalReference",
+                    "keys": [
+                      {
+                        "type": "GlobalReference",
+                        "value": "https://etri.re.kr/mdt/Submodel/Operation/Input/1/1"
+                      }
+                    ]
+                  },
+                  "value": [
+                    {
+                      "category": "",
+                      "idShort": "InputID",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12 ID (idShort)"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "DefectList",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputName",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12 \uC774\uB984"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "DefectList",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputValue",
+                      "valueType": "xs:string",
+                      "value": "0,0,0,0,0,0,1",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "InputType",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uC785\uB825\uAC12 \uD615\uD0DC"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "string",
+                      "modelType": "Property"
+                    }
+                  ],
+                  "modelType": "SubmodelElementCollection"
+                }
+              ],
+              "modelType": "SubmodelElementList"
+            },
+            {
+              "category": "",
+              "idShort": "Outputs",
+              "orderRelevant": true,
+              "typeValueListElement": "SubmodelElement",
+              "value": [
+                {
+                  "category": "",
+                  "idShort": "",
+                  "semanticId": {
+                    "type": "ExternalReference",
+                    "keys": [
+                      {
+                        "type": "GlobalReference",
+                        "value": "https://etri.re.kr/mdt/Submodel/Operation/Output/1/1"
+                      }
+                    ]
+                  },
+                  "value": [
+                    {
+                      "category": "",
+                      "idShort": "OutputID",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12 ID"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "DefectList",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "OutputName",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12 \uC774\uB984"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "DefectList",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "OutputValue",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "0,0,0,0,0,0,1,0",
+                      "modelType": "Property"
+                    },
+                    {
+                      "category": "",
+                      "idShort": "OutputType",
+                      "description": [
+                        {
+                          "language": "Korean",
+                          "text": "\uCD9C\uB825\uAC12 \uD615\uD0DC"
+                        }
+                      ],
+                      "valueType": "xs:string",
+                      "value": "string",
+                      "modelType": "Property"
+                    }
+                  ],
+                  "modelType": "SubmodelElementCollection"
+                }
+              ],
+              "modelType": "SubmodelElementList"
+            }
+          ],
+          "modelType": "SubmodelElementCollection"
+        },
+        {
+          "idShort": "Operation",
+          "inputVariables": [
+            {
+              "value": {
+                "idShort": "Defect",
+                "valueType": "xs:string",
+                "modelType": "Property"
+              }
+            }
+          ],
+          "outputVariables": [],
+          "inoutputVariables": [
+            {
+              "value": {
+                "idShort": "DefectList",
+                "valueType": "xs:string",
+                "modelType": "Property"
+              }
+            }
+          ],
+          "modelType": "Operation"
+        }
+      ],
+      "modelType": "Submodel"
+    }
+  ],
+  "conceptDescriptions": [
+    {
+      "category": "CONSTANT",
+      "idShort": "",
+      "administration": {
+        "version": "",
+        "revision": ""
+      },
+      "id": "95c7693d-f132-40a2-b3a8-8fcb6d1f69fb",
+      "isCaseOf": [
+        {
+          "type": "ModelReference",
+          "keys": []
+        }
+      ],
+      "modelType": "ConceptDescription"
+    }
+  ]
+}

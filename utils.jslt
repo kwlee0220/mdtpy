@@ -1,0 +1,65 @@
+def semantic_id_value(semanticId)
+  $semanticId.keys[0].value
+
+def submodel_by_semanticId(env, semantic_id_key)
+  [for ($env.submodels) . if ( semantic_id_value(.semanticId) == "https://etri.re.kr/mdt/Submodel/" + $semantic_id_key + "/1/1" ) ]
+
+def smc_field(smc, id_short_name)
+  let result = [for ( $smc.value ) . if ( .idShort == $id_short_name )]
+  $result[0]
+def smc_field_value(smc, id_short_name)
+  let result = [for ( $smc.value ) .value if ( .idShort == $id_short_name )]
+  $result[0]
+
+def build_arg(arg_smc, kind)
+  let id = smc_field_value($arg_smc, $kind + "ID")
+  let pv = smc_field($arg_smc, $kind + "Value")
+  if ( $pv.modelType == "Property" )
+    {
+      "id": $id,
+      "type": $pv.valueType,
+      "value": $pv.value
+    }
+  else if ( $pv.modelType == "File" )
+    {
+      "id": $id,
+      "type": "File",
+      "contentType": $pv.contentType,
+      "value": $pv.value
+    }
+
+def build_args(args_sml, arg_kind)
+  [for ( $args_sml.value ) build_arg(., $arg_kind)]
+
+def build_parameters(data)
+  let data_info = submodel_field($data, "DataInfo")
+  let equipment = smc_field($data_info, "Equipment")
+  let pvalues_sml = smc_field($equipment , "EquipmentParameterValues")
+  build_args($pvalues_sml, "Parameter")
+
+def submodel_field(smc, id_short_name)
+  let result = [for ( $smc.submodelElements ) . if ( .idShort == $id_short_name )]
+  $result[0]
+
+def build_op_submodel_info(op_model_smc, kind)
+  let id = $op_model_smc.id
+  let info = submodel_field($op_model_smc, $kind + "Info")
+  {
+    "id": $id,
+    "idShort": $op_model_smc.idShort,
+    "semanticId": semantic_id_value($op_model_smc.semanticId),
+    "inputs": build_args(smc_field($info, "Inputs"), "Input"),
+    "outputs": build_args(smc_field($info, "Outputs"), "Output")
+  }
+
+def build_instance_info(env)
+  let shell = .assetAdministrationShells[0]
+  {
+    "aasId": $shell.id,
+    "aasIdShort": $shell.idShort,
+    "parameters": build_parameters(submodel_by_semanticId(., "Data")[0]),
+    "ais" : [for ( submodel_by_semanticId(., "AI") ) build_op_submodel_info(., "AI")],
+    "simulations" : [for ( submodel_by_semanticId(., "Simulation") ) build_op_submodel_info(., "Simulation")]
+  }
+
+build_instance_info(.)

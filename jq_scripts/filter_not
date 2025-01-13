@@ -1,0 +1,17 @@
+#!  /bin/bash
+
+for ARGUMENT in "$@"
+do
+   KEY=$(echo $ARGUMENT | cut -f1 -d=)
+
+   KEY_LENGTH=${#KEY}
+   VALUE="${ARGUMENT:$KEY_LENGTH+1}"
+
+   export "$KEY"="$VALUE"
+done
+
+if [[ ! -z ${id} ]]; then
+   eval "jq -r 'include \"mdt\"; [.[] | filter_not_by_id(\"$id\")]'"
+elif [[ ! -z ${status} ]]; then
+   eval "jq -r 'include \"mdt\"; [.[] | filter_not_by_status(\"$status\")]'"
+fi
