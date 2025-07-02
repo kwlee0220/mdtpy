@@ -5,13 +5,15 @@ from abc import ABC, abstractmethod
 from .aas_model import *
 
 
-def to_value(sme:SubmodelElement) -> ElementValue:
+def to_value(sme:Optional[SubmodelElement]) -> Optional[ElementValue]:
+    if sme is None:
+        return None
     if isinstance(sme, Property):
         return PropertyValue(sme.value)
     elif isinstance(sme, SubmodelElementCollection):
-        return ElementValueCollection({ element.idShort:to_value(element) for element in sme.value })
+        return ElementCollectionValue({ element.idShort:to_value(element) for element in sme.value })
     elif isinstance(sme, SubmodelElementList):
-        return ElementValueList([to_value(element) for element in sme.value ])
+        return ElementListValue([to_value(element) for element in sme.value ])
     elif isinstance(sme, File):
         value:dict[str,str] = { 'contentType': sme.contentType }
         if sme.value:
@@ -21,12 +23,16 @@ def to_value(sme:SubmodelElement) -> ElementValue:
         json_obj:dict[str,str] = sme.serializeValue()
         json_obj.pop('idShort')
         return RangeValue(**json_obj)
-        
+    else:
+        raise NotImplementedError(f"Unknown SubmodelElement type: {type(sme)}")
+
+
 class ElementValue(ABC):
     @abstractmethod
-    def to_json_object(self): Any
+    def to_json_object(self) -> Any:
+        pass
 
-class ElementValueCollection(ElementValue):
+class ElementCollectionValue(ElementValue):
     def __init__(self, elements:dict[str,ElementValue]):
         super().__init__()
         self.elements = elements
@@ -35,7 +41,7 @@ class ElementValueCollection(ElementValue):
         return { name:smev.to_json_object() for name, smev in self.elements.items()}
 
 
-class ElementValueList(ElementValue):
+class ElementListValue(ElementValue):
     def __init__(self, elements:list[ElementValue]):
         super().__init__()
         self.elements = elements
@@ -47,15 +53,15 @@ class ElementValueList(ElementValue):
 class DataElementValue(ElementValue): pass
 
 class PropertyValue(DataElementValue):
-    def __init__(self, value:str):
+    def __init__(self, value:Optional[str]):
         super().__init__()
         self.value = value
         
-    def to_json_object(self) -> str:
+    def to_json_object(self) -> Optional[str]:
         return self.value
     
     def __repr__(self):
-        return self.value
+        return str(self.value) if self.value else ''
 
  
 class FileValue(DataElementValue):
@@ -80,7 +86,7 @@ class RangeValue(DataElementValue):
         self.min = min
         self.max = max
         
-    def to_json_object(self) -> dict[str,str]:
+    def to_json_object(self) -> dict[str,Optional[str]]:
         return {'min': self.min, 'max': self.max}
 
 

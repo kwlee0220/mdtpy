@@ -1,3 +1,5 @@
+
+    
 class MDTException(Exception):
     def __init__(self, details:str) -> None:
         self.details = details
@@ -52,5 +54,5 @@ class InvalidResourceStateError(MDTException):
         super().__init__(details)
         
     @classmethod
-    def create(cls, resource_type:str, id_spec:str):
-        return InvalidResourceStateError(f"Resource(type={resource_type}, {id_spec})")
+    def create(cls, resource_type:str, id_spec:str, status):
+        return InvalidResourceStateError(f"Resource(type={resource_type}, {id_spec}), status={status}")

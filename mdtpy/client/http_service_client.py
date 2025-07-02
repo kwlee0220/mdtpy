@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional
 from dataclasses import asdict, dataclass, field
 from enum import Enum
+from collections import OrderedDict
 
 from datetime import timedelta
 import time
@@ -17,12 +18,13 @@ from .http_client import to_base64_string, parse_none_response, parse_response
 from .http_fa3st_client import HttpFa3stClient
 from mdtpy.model import InstanceSubmodelDescriptor, ElementReferenceCollection, ElementReference, DefaultElementReference, \
                         AssetAdministrationShell, AssetAdministrationShellService, Endpoint, \
-                        Submodel, SubmodelElement, SubmodelElementList, \
+                        Submodel, SubmodelElement, SubmodelElementList, SubmodelElementCollection, \
                         OperationVariable, OperationResult, OperationRequest, OperationHandle, \
                         AssetInformation, Reference, ProtocolInformation, \
                         SubmodelService, InformationModelService, DataService, OperationService, AIService, SimulationService, \
                         MDTFile, TwinComposition, ElementValue, \
                         OperationError, CancellationError
+from mdtpy.model import TimeSeriesService, Segments, Segment, Metadata
 
 
 class HttpAssetAdministrationShellServiceClient(HttpFa3stClient, AssetAdministrationShellService):
@@ -209,14 +211,19 @@ class DataSubmodelServiceClient(HttpSubmodelServiceClient, DataService):
         super().__init__(instance_id=instance_id, sm_desc=sm_desc, url=url)
         self._asset_type = asset_type
         
-        self._parameters = ElementReferenceCollection()
-        pvalues = self.getSubmodelElementByPath(f'DataInfo.{asset_type}.{asset_type}ParameterValues')
-        if not isinstance(pvalues, SubmodelElementList):
-            raise ValueError(f'Unexpected SubmodelElement type (not SubmodelElementList): {pvalues.__class__}')
-        for index, param in enumerate(pvalues.value):
-            key:str = next(field.value for field in param.value if field.idShort == 'ParameterID')
-            path = f'DataInfo.{asset_type}.{asset_type}ParameterValues[{index}].ParameterValue'
-            self._parameters.append(key, DefaultElementReference(self, path))
+        param_keys = [self._to_param_id(smc) for smc in self.getSubmodelElementByPath(f'DataInfo.{asset_type}.{asset_type}Parameters').value]
+        mappings = OrderedDict()
+        for idx, key in enumerate(param_keys):
+            svc = HttpSubmodelServiceClient(instance_id=instance_id, sm_desc=sm_desc, url=url)
+            path = f'DataInfo.{asset_type}.{asset_type}ParameterValues[{idx}]'
+            mappings[key] = DefaultElementReference(svc, path)
+        self._parameters = ElementReferenceCollection(mappings)
+            
+    def _to_param_id(self, param:SubmodelElementCollection) -> str:
+        for prop in param.value:
+            if prop.idShort == 'ParameterID':
+                return prop.value
+        raise ValueError(f'ParameterID not found in {param}')
             
     @property
     def asset_type(self) -> str:
@@ -344,3 +351,32 @@ class AIServiceClient(OperationServiceClient, AIService):
 class SimulationServiceClient(OperationServiceClient, SimulationService): 
     def __init__(self, instance_id:str, sm_desc:InstanceSubmodelDescriptor, url:str) -> None:
         super().__init__(instance_id, sm_desc, url, 'Simulation')
+        
+        
+
+class TimeSeriesSubmodelServiceClient(HttpSubmodelServiceClient, TimeSeriesService):
+    def __init__(self, instance_id:str, sm_desc:InstanceSubmodelDescriptor, url:str) -> None:
+        super().__init__(instance_id=instance_id, sm_desc=sm_desc, url=url)
+        
+    @property
+    def metadata(self) -> Metadata:
+        metadata_smc = self.getSubmodelElementByPath(f'Metadata')
+        if not isinstance(metadata_smc, SubmodelElementCollection):
+            raise ValueError(f'Unexpected SubmodelElement type (not SubmodelElementCollection): {metadata_smc.__class__}')
+        
+        return Metadata.from_element(metadata_smc)
+        
+    @property
+    def segments(self) -> Segments:
+        segments_smc = self.getSubmodelElementByPath(f'Segments')
+        if not isinstance(segments_smc, SubmodelElementCollection):
+            raise ValueError(f'Unexpected SubmodelElement type (not SubmodelElementCollection): {segments_smc.__class__}')
+        
+        return Segments.from_element(segments_smc)
+    
+    def segment(self, id:str) -> Segment:
+        segment_smc = self.getSubmodelElementByPath(f'Segments.{id}')
+        if not isinstance(segment_smc, SubmodelElementCollection):
+            raise ValueError(f'Unexpected SubmodelElement type (not SubmodelElementCollection): {segment_smc.__class__}')
+        
+        return Segment.from_element(segment_smc)

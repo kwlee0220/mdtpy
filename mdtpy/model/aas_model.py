@@ -1,10 +1,13 @@
 from typing import Optional, Any, TypeVar, cast, Protocol, runtime_checkable
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
 from enum import Enum, auto
 
 from datetime import timedelta
+import json
+from .datatype_def_xsd import from_xsd_to_python, from_python_to_xsd
         
 
 class DataTypeDefXsd(Enum):
@@ -148,7 +151,7 @@ class EmbeddedDataSpecification:
     dataSpecificationContent: DataSpecificationContent
     
 class QualifierKind(Enum):
-    CONCEPT_QUALIFIER = auto()
+    ConceptQualifier = auto()
     TEMPLATE_QUALIFIER = auto()
     VALUE_QUALIFIER = auto()
 
@@ -189,6 +192,9 @@ class AbstractLangString(HasExtensions):
         if self.text: json_obj['text'] = self.text
         if self.extensions: json_obj['extensions'] = [e.to_dict() for e in self.extensions]
         return json_obj
+    
+    def __repr__(self) -> str:
+        return f"{self.language}:{self.text}"
 
 class LangStringNameType(AbstractLangString): pass
 class LangStringTextType(AbstractLangString): pass
@@ -239,13 +245,14 @@ class HasDataSpecification(ABC):
 @dataclass_json
 @dataclass(kw_only=True, slots=True)
 class Qualifier(HasSemantics):
-    kind: Optional[QualifierKind] = field(default=None)
+    semanticId: Optional[Reference] = field(default=None)
+    supplementalSemanticIds: list[Reference] = field(default_factory=list)
+    kind: Optional[str] = field(default=None)
     type: Optional[str] = field(default=None)
     valueType: str
     value: Optional[str] = field(default=None)
     valueId: Optional[Reference] = field(default=None)
     embeddedDataSpecification: list[EmbeddedDataSpecification] = field(default_factory=list)
-    
 
 class Qualifiable(ABC):
     @property
@@ -412,7 +419,11 @@ class SubmodelElement(Referable, HasSemantics, Qualifiable, HasDataSpecification
     @property
     def idShort(self) -> Optional[str]:
         return self.fields.get('idShort')
-        
+    
+    @property
+    def modelType(self) -> str:
+        return str(self.fields.get('modelType'))
+    
     @property
     def category(self) -> Optional[str]:
         return self.fields.get('category')
@@ -456,6 +467,19 @@ class SubmodelElement(Referable, HasSemantics, Qualifiable, HasDataSpecification
         objs = self.fields.get('embeddedDataSpecification')
         return objs if objs else []
     
+    @abstractmethod
+    def read_value(self) -> Any:
+        """Read the value of this submodel element.
+        
+        Returns:
+            Any: The value of this submodel element.
+        """
+        pass
+    
+    @abstractmethod
+    def update_value(self, value:Any) -> None:
+        pass
+    
     def to_json_obj(self, modelType:Optional[str]=None) -> dict[str,Any]:
         json_obj = dict()
         json_obj['modelType'] = modelType if modelType else self.__class__.__name__.split('.')[-1]
@@ -487,7 +511,6 @@ class ValueOnlySerializable(Protocol):
     def serializeValue(self) -> dict[str,Any]: ...
 
 
-
 class Property(SubmodelElement):
     def __init__(self, fields:dict[str,Any]) -> None:
         super().__init__(fields)
@@ -501,13 +524,19 @@ class Property(SubmodelElement):
         return self.fields['value']
     
     @value.setter
-    def value(self, value:str):
+    def value(self, value:Optional[str]):
         self.fields['value'] = value
     
     @property
     def valueId(self) -> Optional[Reference]:
         return self.fields.get('valueId')
     
+    def read_value(self) -> Any:
+        return from_xsd_to_python(self.valueType, self.value)
+        
+    def update_value(self, value:Optional[Any]) -> None:
+        self.value = from_python_to_xsd(self.valueType, value)
+
     def to_json_obj(self) -> dict[str,Any]:
         json_obj = super().to_json_obj()
         json_obj['modelType'] = 'Property'
@@ -535,6 +564,13 @@ class File(SubmodelElement):
     def contentType(self) -> str:
         return self.fields['contentType']
     
+    def read_value(self) -> dict[str,str]:
+        return {'contentType': self.contentType, 'value': self.value}
+        
+    def update_value(self, value:dict[str,str]) -> None:
+        self.value = value['value']
+        self.contentType = value['contentType']
+
     def to_json_obj(self) -> dict[str,Any]:
         json_obj = super().to_json_obj()
         json_obj['contentType'] = self.contentType
@@ -561,6 +597,13 @@ class Range(SubmodelElement):
     def max(self) -> str:
         return self.fields['max']
     
+    def read_value(self) -> dict[str,str]:
+        return {'min': self.min, 'max': self.max}
+        
+    def update_value(self, value:dict[str,str]) -> None:
+        self.min = value['min']
+        self.max = value['max']
+    
     def to_json_obj(self) -> dict[str,Any]:
         json_obj = super().to_json_obj()
         if self.min: json_obj['min'] = self.min
@@ -584,15 +627,27 @@ class Range(SubmodelElement):
 class SubmodelElementCollection(SubmodelElement):
     def __init__(self, fields:dict[str,Any]) -> None:
         super().__init__(fields)
+        self._fields = { sme.idShort: sme for sme in fields['value'] }
     
     @property
     def value(self) -> list[SubmodelElement]:
         return self.fields['value']
     
+    def __getitem__(self, key:str) -> SubmodelElement:
+        return self._fields[key]
+    
     def get(self, id_short:str, cls:type[SubmodelElementT]=SubmodelElement) -> Optional[SubmodelElementT]:
         for sme in self.fields['value']:
             if sme.idShort == id_short:
                 return cast(cls, sme)
+            
+    def read_value(self) -> dict[str | None, Any]:
+        return { field.idShort: field.read_value() for field in self.value }
+    
+    def update_value(self, value:dict[str,Any]) -> None:
+        for field in self.value:
+            if field.idShort in value:
+                field.update_value(value[field.idShort])
         
     def serializeValue(self) -> dict[str,Any]:
         serialized:dict[str,Any] = dict()
@@ -630,6 +685,13 @@ class SubmodelElementList(SubmodelElement):
     @property
     def value(self) -> list[SubmodelElement]:
         return self.fields['value']
+            
+    def read_value(self) -> list[Any]:
+        return [ sme.read_value() for sme in self.value ]
+    
+    def update_value(self, value:list[Any]) -> None:
+        for sme, v in zip(self.fields['value'], value):
+            sme.update_value(v)
 
 @dataclass_json
 @dataclass(slots=True)

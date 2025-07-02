@@ -1,0 +1,530 @@
+지금 부터 내가 만든 MDT 프레임워크에 대해서 설명해 줄꺼야.
+
+MDT 프레임워크는 python으로 작성되었어. 그래서 사용하려면 먼저 mdtpy 라는 module을 pip를 통해서 설치해야 해.
+
+mdtpy module을 설치하면 python 프로그램 작성시 mdtpy 를 import시킬 수 있어.
+즉, 'import mdtpy'를 문장을 통해 python 프로그램에서 MDT 프레임워크를 사용할 수 있게 돼.
+
+* MDT 프레임워크는 클라이언트-서버 구조를 따름.
+* mdtpy module의 connect()라는 함수를 통해 MDT 프레임워크 서버에 접속함. (다음 <code> 영역 참고)
+<code>
+def connect(host:str='localhost', port:int=12985, path:str='/instance-manager') -> HttpMDTManagerClient:
+    endpoint = f"http://{host}:{port}{path}"
+    return HttpMDTManagerClient(endpoint)
+</code>
+* 함수 정의와 같이 connect() 함수는 'host' 와 'port', 그리고 'path' 라는 세개의 인자를 받도록 정의됨.
+    - host: 접속할 MDT 프레임워크의 IP 주소임. Default 값으로 'localhost'를 사용
+    - port: int 타입으로 접속할 MDT 프레임워크의 tcp port 번호임. Default 값으로 12985를 사용.
+    - path: str 타입으로 MDT 프레임워크의 url path임. Default 값으로 '/instance-manager'를 사용.
+* connect() 함수는 mdpty module에 정의되었기 때문에, 이 함수를 사용하기 위해서 다음과 같은 import 문이 필요함.
+  <code>
+    from mdtpy import connect
+  </code>
+
+* HttpMDTManagerClient는 MDTInstanceManager라는 abstract class를 상속 받아서 정의됨.
+* MDTInstanceManager는 다음 <code>과 같이 Python으로 구현됨.
+<code>
+class MDTInstanceManager(ABC):
+    @property
+    @abstractmethod
+    def instances(self) -> MDTInstanceCollection: pass
+    
+    @abstractmethod
+    def getAssetAdministrationShellService(self, aasId:str) -> AssetAdministrationShellService: pass
+    @abstractmethod
+    def getSubmodelService(self, submodelId:str) -> SubmodelService: pass
+</code>
+* MDTInstanceManager 객체의 instances 속성은 MDT 프레임워크에 등록된 모든 MDTInstance 객체들의 리스트를 갖은 속성임.
+* instances 속성의 타입은 MDTInstanceCollection 클래스이고, 다음 <code>과 같이 정의됨.
+<code>
+class MDTInstanceCollection(ABC):
+    @abstractmethod
+    def __iter__(self) -> Iterator[MDTInstance]: pass
+    
+    @abstractmethod
+    def __contains__(self, key:str) -> bool: pass
+    
+    @abstractmethod
+    def __getitem__(self, id:str) -> MDTInstance: pass
+    
+    @abstractmethod
+    def __delitem__(self, key:str) -> None: pass
+    
+    @abstractmethod
+    def find(self, **kwargs) -> list[MDTInstance]: pass
+    
+    @abstractmethod
+    def add(self, id:str, port:int, inst_dir:str) -> MDTInstance: pass
+    
+    def __delitem__(self, id:str) -> None:
+        self.remove(id)
+        
+    @abstractmethod
+    def remove(self, id:str) -> None: pass
+    
+    @abstractmethod
+    def remove_all(self) -> None: pass
+</code>
+예를들어 MDT 프레임워크에 등록된 모든 MDTInstance들을 출력하는 코드는 다음과 같음.
+<code>
+for inst in mdt.instances
+  print(inst)
+</code>
+* MDTInstanceCollection의 __getitem__ 메소드를 호출할 때 key에 해당하는 MDTInstance가 없는 경우에는
+  KeyError 예외가 발생하는 것이 아니라 ResourceNotFoundError 예외가 발생하기 때문에
+  코드 작성시 이를 고려하기 바람.
+
+### MDTInstance 설명
+
+#### MDTInstance 인터페이스 정의
+* MDTInstance는 다음 <code>와 같이 구현됨.
+<code>
+class MDTInstance(ABC):
+    @property
+    @abstractmethod
+    def id(self) -> str: pass
+    @property
+    @abstractmethod
+    def aasId(self) -> str: pass
+    @property
+    @abstractmethod
+    def aasIdShort(self) -> str: pass
+    
+    @property
+    @abstractmethod
+    def status(self) -> MDTInstanceStatus: pass
+    @property
+    @abstractmethod
+    def serviceEndpoint(self) -> Optional[str]: pass
+    
+    @abstractmethod
+    def start(self) -> StatusResult: pass
+    @abstractmethod
+    def stop(self) -> StatusResult: pass
+    
+    @property
+    @abstractmethod
+    def parameters(self) -> ElementReferenceCollection: pass
+    
+    @property
+    @abstractmethod
+    def operations(self) -> OperationServiceCollection: pass
+    
+    @property
+    @abstractmethod
+    def shell(self) -> AssetAdministrationShellService: pass
+    @property
+    @abstractmethod
+    def submodels(self) -> SubmodelServiceCollection: pass
+</code>
+
+#### MDTInstance 인터페이스 설명
+  * id 는 MDTInstance에 부여된 유일한 식별자를 가진 속성임.
+  * aasId는 MDTInstance에 부여된 또 다른 유일한 식별자로 str 타입이고, 일반적으로 id보다는 복잡하고 길어서
+    그리 자주 사용하지 않음. 그래서 'MDTInstance의 식별자'라고 말할 때는 id 속성을 의미함.
+  * aasIdShort는 MDTInstance에 부여된 식별자이지만, 앞서의 두 개의 식별자와는 달리 프레임워크 전체에서 유일하지 않음.
+    즉 MDT 프레임워크에 포함된 MDTInstance들 중에서 두개 이상이 동일한 aasIdShort을 가질 수 있음.
+    이 속성은 일종의 aasId의 alias이라고 볼 수 있음.
+  * status는 MDTInstance의 상태 값을 나타내는 속성으로 다음 <code>처럼 MDTInstanceStatus 타입으로 구현됨.
+    MDTInstanceStatus은 'mdtpy.model' 모듈에 포함되어 있기 때문에 'from mdtpy.model import MDTInstanceStatus' 과 같이
+    미리 import 명령을 사용해야 함.
+    <code>
+    class MDTInstanceStatus(Enum):
+        STOPPED = 0
+        STARTING = 1
+        RUNNING = 2
+        STOPPING = 3
+        FAILED = 4
+    </code>
+    - MDTInstanceStatus.STOPPED: MDTInstance가 정지된 상태.
+    - MDTInstanceStatus.STARTING: MDTInstance가 start() 메소드 호출을 통해 시작되고 있는 상태. (일종의 중간 과정인 상태임.)
+    - MDTInstanceStatus.RUNNING: MDTInstance가 start() 메소드 호출로 성공적으로 시작되어 동작 중인 상태.
+    - MDTInstanceStatus.STOPPING: 동작 중인 MDTInstance에 stop() 메소드를 호출하여 종료 과정 중에 있는 상태. (일종의 중간 상태임.)
+                성공적으로 종료가 완료되면 상태는 STOPPED로 전이됨.
+    - MDTInstanceStatus.FAILED: MDTInstance의 동작 과정에서 오류가 발생해서 중지된 상태.
+    - status 속성 값을 보면 이 MDTInstance의 상태가 동작 중인지 아닌지를 알 수 있고, start()와 stop()을 통해
+        MDTInstance를 시작시키거나 종료시킬 수 있음.
+  * 하나의 MDTInstance는 하나의 AssetAdministrationShellService와 여러 개의 Submodel을 가질 수 있음.
+    - 'shell' 속성을 통해  AssetAdministrationShellService는 접근할 수 있음.
+    - 'submodels' 속성을 통해 SubmodelServiceCollection를 접근할 수 있음.
+      이것을 통해 MDTInstance에 포함된 Submodel을 접근할 수 있음.
+    - SubmodelServiceCollection 타입은 다음 <code>와 같이 구현됨.
+      <code>
+      class SubmodelServiceCollection(ABC):
+          @abstractmethod
+          def __iter__(self) -> Iterator[SubmodelService]: pass
+          
+          @abstractmethod
+          def __bool__(self) -> bool: pass
+          
+          @abstractmethod
+          def __len__(self) -> int: pass
+                
+          @abstractmethod
+          def __getitem__(self, key:str) -> SubmodelService: pass
+              
+          def __setitem__(self, key:str, value:SubmodelService) -> None:
+              raise NotImplementedError('SubmodelServiceCollection does not support set operation')
+          
+          def __delitem__(self, key:str) -> None:
+              raise NotImplementedError('SubmodelServiceCollection does not support delete operation')
+          
+          @abstractmethod
+          def find(self, **kwargs) -> Generator[SubmodelService, None, None]: pass
+      </code>
+      여기서 __getitem__() 메소드의 인자에 검색하고자하는 submodel의 idShort를 인자로 주면, 해당 idShort를 가진
+      Submodel 객체를 얻을 수 있어. 뿐만 아니라 SubmodelServiceCollection에 속한 메소드들 중 key 인자는
+      Submodel의 id가 아니라 idShort를 사용함.
+      만일 idShort에 해당하는 Submodel 객체가 없는 경우에는 KeyError 예외가 발생하는 것이 아니라
+      ResourceNotFoundError 예외가 발생됨.
+
+#### 파라미터 (Parameter), ElementReferenceCollection, and ElementReference
+* MDTInstance는 여러 개의 파라미터(parameter)들을 가질 수 있고, 이는 parameters 속성을 통해 접근 가능함.
+##### ElementReferenceCollection 인터페이스
+* MDTInstance의 parameters 속성은 ElementReferenceCollection 타입 객체를 반환하고, 그 구현은 다음 <code>와 같음.
+<code>
+class ElementReferenceCollection:
+    def __init__(self):
+        self._references:OrderedDict[str,ElementReference] = OrderedDict()
+            
+    def __iter__(self):
+        return iter((key, ref) for key, ref in self._references.items())
+    
+    def __bool__(self):
+        return len(self._references) > 0
+    
+    def __len__(self):
+        return len(self._references)
+    
+    def keys(self) -> set[str]:
+        return set(self._references.keys())
+    
+    def values(self) -> list[ElementReference]:
+        return list(self._references.values())
+    
+    def __contains__(self, key) -> bool:
+        return key in self._references
+    
+    def __repr__(self):
+        list_str = ', '.join([f"{key}={ref}" for key, ref in self._references.items()])
+        return '{' + list_str + '}'
+        
+    def __getitem__(self, key:str) -> Any:
+        if isinstance(key, str):
+            return self.__assert_key(key).read()
+        elif isinstance(key, int):
+            return self.__assert_index(key).read()
+        else:
+            raise ValueError(f'Invalid ElementReference index: {key}')
+        
+    def __setitem__(self, key:str|int, value:str|ElementValue|MDTFile) -> None:
+        ref = None
+        if isinstance(key, str):
+            ref = self.__assert_key(key)
+        elif isinstance(key, int):
+            ref = self.__assert_index(key)
+        else:
+            raise ValueError(f'Invalid ElementReference: key={key}')
+        
+        if isinstance(value, str):
+            ref.update_with_string(value)
+        elif isinstance(value, ElementValue):
+            ref.update(value)
+        elif isinstance(value, MDTFile):
+            ref.put_file(value)
+        else:
+            raise ValueError(f'Invalid ElementValue: {value}')
+    
+    def append(self, key:str, ref:ElementReference) -> ElementReferenceCollection:
+        self._references[key] = ref
+        return self
+    
+    def __call__(self, *args, **kwds):
+        assert len(args) == 1
+        
+        key = args[0]
+        if isinstance(key, str):
+            return self.__assert_key(key)
+        elif isinstance(key, int):
+            return self.__assert_index(key)
+        else:
+            raise ValueError(f'Invalid ElementReference key: {key}')
+        
+    def __assert_key(self, key:str) -> ElementReference:
+        try:
+            return self._references[key]
+        except KeyError:
+            raise ResourceNotFoundError.create("ElementReference", f'key={key}')
+        
+    def __assert_index(self, index:int) -> ElementReference:
+        ref_list = list(self._references.values())
+        try:
+            return ref_list[index]
+        except Exception:
+            raise ResourceNotFoundError.create("ElementReference", f'index={index}')
+</code>
+##### ElementReferenceCollection 인터페이스 설명
+* ElementReferenceCollection의 __iter__() 메소드를 호출하는 경우 (key, ref) 형태로 구성된 python tuple 객체들을 접근할 수 있음.
+    - key: ElementReference에 부여된 key 문자열
+    - ref: ElementReference 객체임.
+    다음 <code>는 ElementReferenceCollection의 __iter__() 메소드를 사용해서 ElementReferenceCollection에 포함된
+    모든 ElementReference들에 대한 키 값을 모두 반환하는 프로그램임.
+    <code>
+    coll:ElementReferenceCollection = ... # coll 변수가 제대로 설정되었다고 가정함.
+    for (key, ref) in coll:
+        print(key)
+    </code>
+* ElementReferenceCollection에서 중요한 점은
+  - __call__() 메소드는 인자로 주어진 key에 해당하는 ElementReference을 반환됨
+  - __getitem__() 메소드는 인자로 주어진 key에 해당하는 ElementReference 객체에 read() 메소드를 호출한 결과가 반환됨.
+  - 다음 <code>는 __call__() 메소드와 __getitem__() 메소드의 차이를 보여준다.
+    <code>
+      # 'test'라는 식별자의 MDTInstance 접근
+      test = mdt.instances['test']
+
+      # 'ref'는 'CycleTime'라는 식별자의 parameter의 reference을 얻어 옴.
+      ref:ElementReference = test.parameters('CycleTime')
+
+      # 'val'는 'CycleTime'이라는 식별자의 parameter의 값을 얻어 옴.
+      # 'val'과 'val2'는 동일함
+      val = test.parameters['UpperImage']
+      val2 = test.parameters('UpperImage').read()
+    </code>
+  - __call__() 메소드도 __getitem__() 메소드와 동일하게 인자로 주어지는 key 값에 해당하는 parameter 값이 존재하지
+    않는 경우는 ResourceNotFoundError 예외를 발생시킨다.
+
+##### ElementReference 인터페이스
+* 다음 <code>는 ElementReference에 대한 구현 내용임.
+<code>
+class ElementReference(ABC):
+    @property
+    @abstractmethod
+    def submodel(self) -> SubmodelService: pass
+    
+    @property
+    @abstractmethod
+    def path(self) -> str: pass
+    
+    @abstractmethod
+    def read(self) -> SubmodelElement: pass
+    
+    @abstractmethod
+    def read_value(self) -> ElementValue: pass
+    
+    @abstractmethod
+    def update(self, smev:ElementValue): pass
+    
+    @abstractmethod
+    def update_with_string(self, json_str:str): pass
+    
+    @abstractmethod
+    def get_file_content(self) -> tuple[str, bytes]: pass
+    
+    @abstractmethod
+    def put_file(self, file:MDTFile) -> None: pass
+
+    @abstractmethod
+    def to_json_object(self) -> dict[str,str]: pass
+</code>
+##### ElementReference 인터페이스 설명
+* ElementReference 에서 제공하는 주요 메소드에 관한 내용을 다음과 같음.
+    - read(): ElementReference가 가리키는 SubmodelElement 객체를 반환함.
+    - read_value(): ElementReference가 가리키는 SubmodelElement 객체의 value 값을 반환함.
+        이 메소드를 사용해서 SubmodelElement 객체의 value를 얻을 수 있지만, 일단 먼저 read() 메소드를 호출해서
+        SubmodelElement 객체를 획득한 후 mdtpy.model 모듈에 포함된 to_value 메소드를 호출해서 value을 얻을 수도 있음.
+        구체적인 사용 방법은 아래 <code>를 참조함.
+        <code>
+        from mdtpy.model import to_value
+        ref:ElementReference = ...
+        sme = ref.read()
+        smev = to_value(sme)
+        </code>
+    - update(smev): 인자로 제공된 smev 값을 이용해서 ElementReference가 가리키는 SubmodelElement 객체를 변경함.
+    - update_with_string(json_str:str): 인자로 제공된 json 문자열을 이용해서 ElementReference가 가리키는 SubmodelElement 객체를 변경함.
+    - get_file_content(): 해당 ElementReference가 가리키는 SubmodelElement의 타입이 File인 경우에만 사용하고,
+        이 메소드를 통해 File SubmodelElement의 내용을 얻을 수 있다. 반환되는 값은 해당 file의 content-type과 file 내용으로 구성된 tuple임.
+    - put_file(file:MDTFile): 해당 ElementReference가 가리키는 SubmodelElement의 타입이 File인 경우에만 사용하고,
+        인자로 주어진 파일을 읽어서 ElementReference가 가리키는 File SubmodelElement의 값을 변경하는 작업을 수행함.
+        여기서 MDTFile은 mdtpy.model 모듈에 포함되어 있고, 내용은 다음 <code>와 같음.
+        <code>
+        class MDTFile:
+            def __init__(self, file_path:str, content_type:Optional[str]=None):
+                from pathlib import Path
+                import mimetypes
+                
+                self.file_path = Path(file_path)
+                self.content_type = content_type if content_type else mimetypes.guess_type(file_path)[0]
+                self.value = self.file_path.name
+                
+            def __repr__(self):
+                return f"{self.file_path} ({self.content_type})"
+        </code>
+    - to_json_object(): ElementReference가 가리키는 SubmodelElement 객체를 json으로 변환한 문자열을 반환함.
+
+### MDTInstance의 parameter의 값을 설정하는 방법
+- MDTInstance의 parameter 값을 읽거나 설정하기 위해서는 해당 MDTInstance가 동작 중이어야 한다.
+
+#### 일반적인 값을 parameter에 설정하는 방법
+일반적인 str, int, float, double 등과 같은 primitive 데이터를 parameter에 설정하는 방법은
+대상 MDTInstance의 'parameters' 속성 객체가 제공하는 __setitem__() 메소드를 사용한다.
+다음 <code>는 'test'라는 식별자를 가진 MDTInstance의 'IncAmount'라는 parameter에 2를 설정하는 예를 보여준다.
+<code>
+test_inst = mdt.instances['test']
+test_inst.parameters['IncAmount'] = 2
+</code>
+#### MDTInstance의 parameter에 파일을 설정하는 방법
+- 특정 path의 file 객체의 경우에는 일반적인 값을 parameter에 설정하는 방법과 약간의 차이가 있다.
+  첫째 설정하려는 file의 경로명으로 이용하여 mdtpy.model.MDTFile 객체를 생성하고 이 객체를 __setitem__() 메소드를
+  사용하여 설정한다.
+  다음은 <code>는 '/home/mdt/xxx.jpg' 라는 경로의 파일을 'test'라는 식별자를 가진 MDTInstance의
+  'Image'라는 parameter에 설정하는 예를 보여준다.
+  <code>
+    from mdtpy.model import MDTFile
+
+    test_inst = mdt.instances['test']
+    test_inst.parameters['Image'] = MDTFile('/home/mdt/xxx.jpg')
+  </code>
+
+* 'MDTInstance'라는 단어는 'MDT Twin', 'Twin', '트윈' 과 같은 용어로 혼용해서 사용할 것임.
+
+### 연산 (Operations)
+- MDTInstance는 여러 개의 OperationService들을 가질 수 있고, 이들은 'operations' 속성을 통해 접근 가능함.
+- MDTInstance의 operations 속성은 OperationServiceCollection 타입으로 MDTInstance가 포함된 OperationService들의 리스트를 가진 속성임.
+- MDTInstance의 OperationService 호출하기 위해서는 해당 MDTInstance가 동작 중이어야 한다.
+
+#### OperationService 인터페이스 정의
+여기서 OperationService는 다음 <code>와 같이 구현됨.
+<code>
+    class OperationService(SubmodelService):
+        @property
+        @abstractmethod
+        def inputs(self) -> ElementReferenceCollection: pass
+        
+        @property
+        @abstractmethod
+        def outputs(self) -> ElementReferenceCollection: pass
+        
+        @abstractmethod
+        def __call__(self, *args, **kwargs): pass
+        
+        def __repr__(self):
+            in_param_id_list_str = ", ".join(id for id, _ in self.inputs)
+            out_param_id_list_str = ", ".join(id for id, _ in self.outputs)
+            return f"{self.idShort}({in_param_id_list_str}) -> {out_param_id_list_str}"
+</code>
+#### OperationService 인터페이스 설명
+- OperationService의 inputs과 outputs 속성은 연산을 호출하기 위해 필요한 입력 인자들에 관한 정보와 연산 호출 결과로
+    생성된 출력 값들을 각각 정의함.
+    내용은 (id, ref) 형태의 python tuple 타입으로 구성됨.
+        - id: 파라미터 이름
+        - ref: 파라미터 값이 저장된 SubmodelElement의 reference
+- 예시: 다음 <code>는 'test' 트윈의 'Simulation'이라는 OperationService의 모든 입력 인자의 key와 해당 인자의 값을 출력하는 예제 프로그램임.
+    <code>
+    mdt = connect()
+    test = mdt.instances['test']
+    sim = test.operations['Simulation']
+    for (arg_key, arg_ref) in sim.inputs:
+        print(arg_key, arg_ref.read_value())
+    </code>
+    - 다음 <code>는 'test' 트윈의 'Simulation'이라는 OperationService의 모든 출력 인자의 key와 해당 인자의 값을 출력하는 예제 프로그램임.
+    <code>
+    mdt = connect()
+    test = mdt.instances['test']
+    sim = test.operations['Simulation']
+    for (arg_key, arg_ref) in sim.outputs:
+        print(arg_key, arg_ref.read_value())
+    </code>
+- OperationService의 __call__() 메소드를 통해 OperationService가 제공하는 실제 서비스를 호출할 수 있음.
+    - 메소드 호출에 필요한 정보는 __call__ 메소드의 keyword 기반 인자를 통해 전달됨.
+    - 입력 인자는 'in_<param_id>=ref' 형식으로 표현. 다음 <code>를 보면
+    <code>
+        mdt = connect()
+        test = mdt.instances['test']
+        op = test.operations['UpdateDefects']
+        op(in_IncAmount=test.parameters('Amount')) # 이 메소드를 참고!
+    </code>
+    위 <code>의 마지막 줄에서 'op(in_IncAmount=test.parameters('Amount'))'의 의미는 test에 속한 'UpdateDefects'라는 식별자의
+    OperationService의 연산을 호출할 때, 'IncAmount'라는 입력 인자로 MDTInstance test에 속한 'Amount'라는 식별자의 parameter의
+    ElementReference를 제공한다는 것을 알 수 있음.
+    - 출력 인자는 입력 인자의 표현 방식과 거의 같지만 인자 이름 앞에 'in_'을 붙이는 대신 'out_'을 붙인다는 점에서 차이가 있음.
+    - 예를들어 'out_Result'는 'Result'라는 이름의 출력 인자를 의미함.
+
+#### OperationServiceCollection 인터페이스 정의
+OperationServiceCollection은 다음에 나올 <code>에서 설명할 SubmodelServiceCollection의 하위 클래스로 SubmodelServiceCollection에 포함된
+SubmodeService들 중에서 semanticId 속성 값이 'https://etri.re.kr/mdt/Submodel/Simulation/1/1' 이거나
+'https://etri.re.kr/mdt/Submodel/AI/1/1'인 것들의 목록으로 정의됨.
+<code>
+class FilteredSubmodelServiceCollection(SubmodelServiceCollection):
+    def __init__(self, base_collection:SubmodelServiceCollection, filter:Callable[[SubmodelService], bool]) -> None:
+        super().__init__()
+        self.base_collection = base_collection
+        self.filter = filter
+
+    def __iter__(self) -> Iterator[SubmodelService]:
+        return (sm for sm in self.base_collection if self.filter(sm))
+    
+    def __bool__(self) -> bool:
+        return any(sm for sm in self.base_collection if self.filter(sm))
+    
+    def __len__(self) -> int:
+        return len(sm for sm in self.base_collection if self.filter(sm))
+          
+    def __getitem__(self, key:str) -> SubmodelService:
+        found = self.base_collection[key]
+        if self.filter(found):
+            return found
+        else:
+            raise ResourceNotFoundError.create("Submodel", f'idShort={key}')
+        
+    def __setitem__(self, key:str, value:SubmodelService) -> None:
+        raise NotImplementedError('SubmodelServiceCollection does not support set operation')
+    
+    def __delitem__(self, key:str) -> None:
+        raise NotImplementedError('SubmodelServiceCollection does not support delete operation')
+    
+    def find(self, **kwargs) -> Generator[SubmodelService, None, None]:
+        return (sm for sm in self.base_collection.find(kwargs) if self.filter(sm))    
+            
+def is_operation_submodel(sm: SubmodelService) -> bool:
+    return sm.semanticId == 'https://etri.re.kr/mdt/Submodel/Simulation/1/1' \
+            or sm.semanticId == 'https://etri.re.kr/mdt/Submodel/AI/1/1'
+            
+class OperationSubmodelServiceCollection(FilteredSubmodelServiceCollection):
+    def __init__(self, sm_coll:SubmodelServiceCollection) -> None:
+        super().__init__(sm_coll, filter=lambda svc: is_operation_submodel(svc))
+</code>
+- MDTInstance의 속성인 opeations는 python의 *dict 타입이 아니라 list 타입이라서*, iteration에서 사용할 때는 operation 객체를 반환한다.
+
+#### Operation을 실행행시키는 방법
+- 연산이 수행될 연산 서버의 접속 정보를 설정함.
+  이 값은 URL 형태의 문자열로 구성되어 있고, 연산 호출시 'server'라는 인자를 통해 지정함.
+  만일 내가 연산 서버 접속 정보를 알려주지 않으면 http://localhost:12987을 값으로 사용해.
+- 대상 Operation의 입력 인자별로 입력 값을 설정한다.
+    예를 들어 test 트윈의 'Simulation'이라는 연산을 시작시키는 경우를 가정하면
+    <code>
+        instance = mdt.instances['test']
+        op = instance.operations['Simulation']
+        op.inputs['Data'] = 100
+        op.inputs['SleepTime'] = 3
+        op(server="http://localhost:12987", \   # 연산 서버의 위치 지정
+            in_Data=instance.parameters('Data'), \ # 'Data' 입력 인자 값을 읽어올 SubmodelElement reference 지정
+            in_SleepTime=instance.parameters('SleepTime'), \  # 'SleepTime' 입력 인자 값을 읽어올 SubmodelElement reference 지정
+            out_Data=instance.parameters('Data')) # 연산 수행 결과로 생성된 'Data' 출력 값을 저장할 SubmodelElement reference 지정
+    </code>
+    * 여기서 Simulation 연산 호출을 위해 입력 인자로 'Data'와 'SleepTime'을 사용한 것을 알 수 있고,
+    * 각각의 인자 값은 'test' 트윈의 parameter인 'Data', 'SleepTime'으로 지정한 것을 볼 수 있고,
+    * 연산 수행 결과로 발생된 출력 인자 'Data'의 값은 'test' 트윈의 parameter인 'Data'에 저장되도록 지정된 것을 알 수 있다.
+    * 만일 입력 인자로 ElementReference를 지정하지 않고, 실제 상수 값을 제공한 경우에는 해당 연산의 동일 이름의 입력 인자에
+        상수 값을 먼저 갱신하고 연산 호출시에도 별도로 기술하지 않아도 된다.
+        예를들어 op라는 OperationService가 있고, 호출할 때 입력 인자 arg1의 값으로 11을 사용하려는 경우 아래와 같이 프로그램을 작성해.
+        <code>
+        op.inputs['arg1'] = 11   # 'arg1' 입력 인자에 요청한 11을 갱신하고
+        op()   # 호출할 때 'arg1'에 대한 지정이 필요없음.
+        </code>
+
+
+
+* connect() 함수의 결과를 'mdt'라는 이름의 변수를 사용함.
+* connect() 함수를 사용해서 MDTInstanceManager를 얻어오는 것부터 시작했으면 좋겠어.
+* 코드를 생성할 때, dataclasses_json 모듈이 import하는 문장은 필요한 경우에만 넣어줘.
+* 내가 코드를 작성해 달라고 했을 때, 작성된 코드에 대한 설명은 명시적으로 요청하지 않으면 생략해 줘.

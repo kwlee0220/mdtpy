@@ -42,12 +42,18 @@ def to_exception(resp:requests.Response) -> MDTException:
             raise RemoteError(json_obj['message'])
         elif code == 'utils.InternalException':
             raise RemoteError(json_obj['message'])
-        elif code == 'java.lang.NullPointerException':
+        elif code == 'java.lang.NullPointerException' \
+            or code == 'java.lang.UnsupportedOperationException':
             raise RemoteError(f"code={json_obj['code']}, message={json_obj['message']}")
         elif code == 'org.springframework.web.servlet.resource.NoResourceFoundException':
             raise RemoteError(json_obj['text'])
         elif code == 'org.springframework.web.HttpRequestMethodNotSupportedException':
             raise RemoteError(json_obj['text'])
+        
+        elif code == 'mdt.model.ResourceNotFoundException':
+            from mdtpy.model import ResourceNotFoundError
+            raise ResourceNotFoundError(json_obj['message'])
+        
         paths = code.split('.')
         
         from importlib import import_module

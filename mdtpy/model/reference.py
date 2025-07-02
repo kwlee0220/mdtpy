@@ -3,11 +3,12 @@ from __future__ import annotations
 from typing import Any
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+import time
 
-from .aas_model import SubmodelElement, Property
+from .aas_model import SubmodelElement, Property, SubmodelElementCollection, SubmodelElementList
 from .aas_service import MDTFile, SubmodelService
 from .exceptions import ResourceNotFoundError
-from .value import ElementValue
+from .value import ElementValue, PropertyValue, ElementCollectionValue, ElementListValue, to_value
 
 
 class ElementReference(ABC):
@@ -22,14 +23,20 @@ class ElementReference(ABC):
     @abstractmethod
     def read(self) -> SubmodelElement: pass
     
-    @abstractmethod
-    def read_value(self) -> ElementValue: pass
+    def read_value(self) -> Any:
+        return self.read().read_value()
     
     @abstractmethod
-    def update(self, smev:ElementValue): pass
+    def update(self, sme:SubmodelElement) -> None: pass
+    
+    @abstractmethod
+    def update_value(self, value:Any): pass
     
     @abstractmethod
     def update_with_string(self, json_str:str): pass
+    
+    @abstractmethod
+    def get_element_value(self) -> ElementValue: pass
     
     @abstractmethod
     def get_file_content(self) -> tuple[str, bytes]: pass
@@ -58,38 +65,55 @@ class DefaultElementReference(ElementReference):
         return self._path
     
     def read(self) -> SubmodelElement:
-        return self._submodel_service.getSubmodelElementByPath(self._path)
+        self.__buffer = self._submodel_service.getSubmodelElementByPath(self._path)
+        return self.__buffer
+
+    def update(self, sme:SubmodelElement) -> None:
+        self.__buffer = sme
+        self._submodel_service.putSubmodelElementByPath(self._path, sme)
     
-    def read_value(self):
-        from .value import to_value
-        return to_value(self.read())
-    
-    def update(self, smev:ElementValue|dict[str,Any]):
+    def update_value(self, value:Any):
+        if self.__buffer is None:
+            self.__buffer = self._submodel_service.getSubmodelElementByPath(self._path)
+        self.__buffer.update_value(value)
+        smev = to_value(self.__buffer)
         self._submodel_service.patchSubmodelElementValueByPath(self._path, smev)
     
     def update_with_string(self, value:str) -> None:
-        match self.buffer:
-            case Property():
-                self._submodel_service.patchSubmodelElementValueByPath(self._path, value)
-            case _:
-                raise ValueError('UnsupportedOperation: update_with_string')
+        if self.__buffer is None:
+            self.__buffer = self._submodel_service.getSubmodelElementByPath(self._path)
+        self.__buffer.update_with_string(value)
+        elm_value = self.__buffer.read_value()
+        self._submodel_service.patchSubmodelElementValueByPath(self._path, elm_value)
             
     def get_file_content(self) -> tuple[str, bytes]:
         return self._submodel_service.getFileContentByPath(self._path)
             
     def put_file(self, file:MDTFile) -> None:
         self._submodel_service.putFileByPath(self._path, file)
+        
+    def get_element_value(self) -> ElementValue:
+        if isinstance(self.__buffer, Property):
+            return PropertyValue(self.__buffer.value)
+        elif isinstance(self.__buffer, SubmodelElementList):
+            return ListValue(self.__buffer.value)
+        elif isinstance(self.__buffer, SubmodelElementCollection):
+            return CollectionValue(self.__buffer.value)
+        else:
+            raise ValueError(f'UnsupportedElementValue: {self.__buffer}')
 
     def to_json_object(self) -> dict[str,str]:
         return {
-            'referenceType': 'default',
-            'instanceId': self._submodel_service.instance_id,
-            'submodelIdShort': self._submodel_service.idShort,
-            'idShortPath': self._path
+            '@type': 'mdt:ref:element',
+            'submodelReference': {
+                'instanceId': self._submodel_service.instance_id,
+                'submodelIdShort': self._submodel_service.idShort
+            },
+            'elementPath': self._path
         }
     
     def __repr__(self):
-        return self._path
+        return f'ref: {self._path}'
         
     @property
     def buffer(self) -> SubmodelElement:
@@ -97,11 +121,11 @@ class DefaultElementReference(ElementReference):
             self.__buffer = self._submodel_service.getSubmodelElementByPath(self.path)
         return self.__buffer
     
- 
+
 class ElementReferenceCollection:
-    def __init__(self):
-        self._references:OrderedDict[str,ElementReference] = OrderedDict()
-            
+    def __init__(self, references:dict[str,ElementReference]=OrderedDict()):
+        self._references = references
+
     def __iter__(self):
         return iter((key, ref) for key, ref in self._references.items())
     
@@ -119,64 +143,32 @@ class ElementReferenceCollection:
     
     def __contains__(self, key) -> bool:
         return key in self._references
+        
+    def __getitem__(self, key:str|int) -> ElementReference:
+        return self.__get_reference(key)
+        
+    def __setitem__(self, key:str|int, value:SubmodelElement|Any) -> None:
+        ref = self.__get_reference(key)
+        if isinstance(value, SubmodelElement):
+            ref.update(value)
+        else:
+            ref.update_value(value)
+            
+    def __get_reference(self, key:str|int) -> ElementReference:
+        if isinstance(key, str):
+            try:
+                return self._references[key]
+            except KeyError:
+                raise ResourceNotFoundError.create("ElementReference", f'key={key}')
+        elif isinstance(key, int):
+            ref_list = list(self._references.values())
+            try:
+                return ref_list[index]
+            except Exception:
+                raise ResourceNotFoundError.create("ElementReference", f'index={index}')
+        else:
+            raise ValueError(f'Invalid ElementReference key: {key}')
     
     def __repr__(self):
         list_str = ', '.join([f"{key}={ref}" for key, ref in self._references.items()])
-        return '{' + list_str + '}'
-        
-    def __getitem__(self, key:str) -> Any:
-        if isinstance(key, str):
-            return self.__assert_key(key).read()
-        elif isinstance(key, int):
-            return self.__assert_index(key).read()
-        else:
-            raise ValueError(f'Invalid ElementReference index: {key}')
-        
-    def __setitem__(self, key:str|int, value:str|ElementValue|MDTFile) -> None:
-        ref = None
-        if isinstance(key, str):
-            ref = self.__assert_key(key)
-        elif isinstance(key, int):
-            ref = self.__assert_index(key)
-        else:
-            raise ValueError(f'Invalid ElementReference: key={key}')
-        
-        if isinstance(value, str):
-            ref.update_with_string(value)
-        elif isinstance(value, int|float|bool):
-            ref.update_with_string(str(value))
-        elif isinstance(value, ElementValue):
-            ref.update(value)
-        elif isinstance(value, MDTFile):
-            ref.put_file(value)
-        else:
-            raise ValueError(f'Invalid ElementValue: {value}')
-    
-    def append(self, key:str, ref:ElementReference) -> ElementReferenceCollection:
-        self._references[key] = ref
-        return self
-    
-    def __call__(self, *args, **kwds):
-        assert len(args) == 1
-        
-        key = args[0]
-        if isinstance(key, str):
-            return self.__assert_key(key)
-        elif isinstance(key, int):
-            return self.__assert_index(key)
-        else:
-            raise ValueError(f'Invalid ElementReference key: {key}')
-        
-    def __assert_key(self, key:str) -> ElementReference:
-        try:
-            return self._references[key]
-        except KeyError:
-            raise ResourceNotFoundError.create("ElementReference", f'key={key}')
-        
-    def __assert_index(self, index:int) -> ElementReference:
-        ref_list = list(self._references.values())
-        try:
-            return ref_list[index]
-        except Exception:
-            raise ResourceNotFoundError.create("ElementReference", f'index={index}')
-    
+        return 'ref_collection: {${list_str}}'

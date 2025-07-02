@@ -44,6 +44,36 @@ class InstanceSubmodelDescriptor:
     id: str
     idShort: Optional[str] = field(default=None)
     semanticId: Optional[str] = field(default=None)
+    
+@dataclass_json
+@dataclass(frozen=True, unsafe_hash=True, slots=True)
+class MDTParameterDescriptor:
+    """
+    A class to represent a parameter descriptor for an MDTInstance.
+
+    Attributes:
+    -----------
+    name : str
+        The name of the parameter.
+    valueType : str
+        The type of the parameter value.
+    """
+    name: str
+    valueType: str
+    
+@dataclass_json
+@dataclass(frozen=True, unsafe_hash=True, slots=True)
+class NamedValueType:
+    name: str
+    valueType: str
+    
+@dataclass_json
+@dataclass(frozen=True, unsafe_hash=True, slots=True)
+class MDTOperationDescriptor:
+    name: str
+    operationType: str
+    inputArguments: list[NamedValueType]
+    outputArguments: list[NamedValueType]
 
 @dataclass_json
 @dataclass(frozen=True, unsafe_hash=True, slots=True)
@@ -55,18 +85,6 @@ class InstanceDescriptor:
     ----------
     id : str
         The unique identifier for the MDTInstance.
-    submodels : list[InstanceSubmodelDescriptor]
-        A list of submodel descriptors contained with the MDTInstance.
-    status : str
-        The status of the MDTInstance.
-        The status can be one of the following values:
-        - STOPPED
-        - STARTING
-        - RUNNING
-        - STOPPING
-        - FAILED
-    baseEndpoint : Optional[str]
-        The base endpoint URL for the MDTInstance.
     aasId : str
         The Asset Administration Shell (AAS) identifier.
     aasIdShort : Optional[str]
@@ -77,17 +95,45 @@ class InstanceDescriptor:
         The type of the asset.
     assetKind : Optional[str]
         The kind of the asset.
+    submodels : list[InstanceSubmodelDescriptor]
+        A list of submodel descriptors contained with the MDTInstance.
+    parameters : list[MDTParameterDescriptor]
+        A list of parameter descriptors for the MDTInstance
+    operations : list[MDTOperationDescriptor]
+        A list of operation descriptors for the MDTInstance
     """
     id: str
-    submodels: list[InstanceSubmodelDescriptor]
-    status: str = field(hash=False, compare=False)
-    baseEndpoint: Optional[str] = field(hash=False, compare=False)
     aasId: str = field(hash=False, compare=False)
     aasIdShort: Optional[str] = field(hash=False, compare=False)
     globalAssetId: Optional[str] = field(hash=False, compare=False)
     assetType: Optional[str] = field(hash=False, compare=False)
     assetKind: Optional[str] = field(hash=False, compare=False)
+    submodels: list[InstanceSubmodelDescriptor]
+    parameters: list[MDTParameterDescriptor]
+    operations: list[MDTOperationDescriptor]
     
+
+@dataclass_json
+@dataclass(frozen=True, unsafe_hash=True, slots=True)
+class InstanceRuntimeInfo:
+    """
+    A class to represent the runtime information of an MDT instance.
+    
+    Attributes:
+    ----------
+    status : str
+        The status of the MDT instance.
+        The status can be one of the following values:
+        - STOPPED
+        - STARTING
+        - RUNNING
+        - STOPPING
+        - FAILED
+    baseEndpoint : Optional[str]
+        The base endpoint URL for the MDT instance.
+    """
+    status: str = field(hash=False, compare=False)
+    baseEndpoint: Optional[str] = None
 
 @dataclass_json
 @dataclass(frozen=True, unsafe_hash=True, slots=True)
@@ -235,7 +281,7 @@ class FilteredSubmodelServiceCollection(SubmodelServiceCollection):
         return any(sm for sm in self.base_collection if self.filter(sm))
     
     def __len__(self) -> int:
-        return len(sm for sm in self.base_collection if self.filter(sm))
+        return len([sm for sm in self.base_collection if self.filter(sm)])
           
     def __getitem__(self, key:str) -> SubmodelService:
         found = self.base_collection[key]
@@ -271,6 +317,10 @@ class MDTInstance(ABC):
         aasIdShort (str): Short identifier for the AAS.
         status (MDTInstanceStatus): Current status of the MDT instance.
         serviceEndpoint (Optional[str]): Service endpoint for the MDT instance.
+        shell (AssetAdministrationShellService): Asset Administration Shell service for the MDT instance.
+        submodels (SubmodelServiceCollection): Collection of submodels for the MDT instance.
+        parameters (ElementReferenceCollection): Collection of parameters for the MDT instance.
+        operations (SubmodelServiceCollection): Collection of operations for the MDT instance.
         
     Methods:
         start() -> StatusResult:
@@ -279,12 +329,6 @@ class MDTInstance(ABC):
             Stops the MDT instance.
         getAssetAdministrationShellService() -> AssetAdministrationShellService:
             Retrieves the Asset Administration Shell service for the MDT instance.
-        getSubmodelServiceById(submodel_id: str) -> SubmodelService:
-            Retrieves a specific Submodel service by its identifier.
-        getAllSubmodelServicesByIdShort(idshort: str) -> list[SubmodelService]:
-            Retrieves all Submodel services matching the given short identifier.
-        getAllSubmodelServices() -> list[SubmodelService]:
-            Retrieves all Submodel services for the MDT instance.
     """
     @property
     @abstractmethod
@@ -344,7 +388,6 @@ class DataService(SubmodelService):
     @property
     @abstractmethod
     def parameters(self) -> ElementReferenceCollection: pass
-  
 
 class OperationService(SubmodelService):
     """
@@ -376,7 +419,8 @@ class OperationService(SubmodelService):
     
 class AIService(OperationService): pass
 class SimulationService(OperationService): pass
-  
+
+
 @dataclass_json
 @dataclass(kw_only=True)
 class ComponentItem:

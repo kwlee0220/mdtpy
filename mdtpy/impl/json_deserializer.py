@@ -40,6 +40,7 @@ def read_enum(json_obj:str, enum_type:Enum) -> Enum:
 def read_submodel_element(json_obj:dict[str,Any]) -> SubmodelElement:
     fields = {
         'idShort': json_obj.get('idShort'),
+        'modelType': json_obj.get('modelType'),
         'category': json_obj.get('category'),
         'displayName': read_dataclass_list(json_obj.get('displayName'), LangStringNameType),
         'description': read_dataclass_list(json_obj.get('description'), LangStringTextType),
