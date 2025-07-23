@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Generator, cast
+from typing import Optional, Generator, cast, Callable
 from collections.abc import Iterator
 
 import requests
@@ -236,7 +236,7 @@ class HttpInstanceClient(MDTInstance):
                 raise InvalidResourceStateError.create("MDTInstance", f"id={self.id}", rt_info.status)
         else:
             rt_info = self.read_runtime_info()
-            poller = InstanceStartPoller(f"{self.instance_url}/$mdt-info", init_desc=rt_info)
+            poller = InstanceStartPoller(f"{self.instance_url}/$mdt-model", init_desc=rt_info)
             poller.wait_for_done()
             rt_info = poller.desc
             if rt_info.status != MDTInstanceStatus.RUNNING.name:
@@ -251,14 +251,14 @@ class HttpInstanceClient(MDTInstance):
                 raise InvalidResourceStateError.create("MDTInstance", f"id={self.id}", rt_info.status)
         else:
             rt_info = self.read_runtime_info()
-            poller = InstanceStopPoller(f"{self.instance_url}/$mdt-info", init_desc=rt_info)
+            poller = InstanceStopPoller(f"{self.instance_url}/$mdt-model", init_desc=rt_info)
             poller.wait_for_done()
             rf_info = poller.desc
             if rf_info.status != MDTInstanceStatus.STOPPED.name:
                 raise InvalidResourceStateError.create("MDTInstance", f"id={self.id}", rt_info.status)
     
     def read_runtime_info(self) -> InstanceRuntimeInfo:
-        url = f"{self.instance_url}/$mdt-info"
+        url = f"{self.instance_url}/$mdt-model"
         resp = requests.get(url)
         return parse_response(InstanceRuntimeInfo, resp)
     
@@ -266,7 +266,7 @@ class HttpInstanceClient(MDTInstance):
         for sm_desc in self.descriptor.submodels:
             if sm_desc.idShort == key:
                 return self.toSubmodelService(sm_desc)
-        raise ResourceNotFoundError.create("SubmodelService", f'idShort={key}')
+        raise ResourceNotFoundError.create("SubmodelService", f'idShort={id_short}')
     
     def find_first_submodel_service(self, condition:Callable[[InstanceSubmodelDescriptor], bool]) -> Optional[SubmodelService]:
         for sm_desc in self.descriptor.submodels:
