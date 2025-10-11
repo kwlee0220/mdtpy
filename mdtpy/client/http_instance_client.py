@@ -24,6 +24,9 @@ def connect(host:str='localhost', port:int=12985, path:str='/instance-manager') 
     endpoint = f"http://{host}:{port}{path}"
     return HttpMDTManagerClient(endpoint)
 
+def connect_endpoint(endpoint:str, path:str='/instance-manager') -> HttpMDTManagerClient:
+    return HttpMDTManagerClient(endpoint + path)
+
 
 class HttpMDTManagerClient(MDTInstanceManager):
     def __init__(self, endpoint:str) -> None:
@@ -88,7 +91,7 @@ class HttpInstanceCollection(MDTInstanceCollection):
         return resp.status_code == 200
         
     def __getitem__(self, key:str) -> HttpInstanceClient:
-        url = f'{self.url_prefix}/{key}'
+        url = f'{self.url_prefix}/{key}/model'
         resp = requests.get(url)
         inst_desc = parse_response(InstanceDescriptor, resp)
         return HttpInstanceClient(self.instance_manager, inst_desc)
@@ -258,13 +261,13 @@ class HttpInstanceClient(MDTInstance):
                 raise InvalidResourceStateError.create("MDTInstance", f"id={self.id}", rt_info.status)
     
     def read_runtime_info(self) -> InstanceRuntimeInfo:
-        url = f"{self.instance_url}/$mdt-model"
+        url = f"{self.instance_url}/model"
         resp = requests.get(url)
         return parse_response(InstanceRuntimeInfo, resp)
     
     def get_submodel_service(self, id_short:str) -> SubmodelService:
         for sm_desc in self.descriptor.submodels:
-            if sm_desc.idShort == key:
+            if sm_desc.idShort == id_short:
                 return self.toSubmodelService(sm_desc)
         raise ResourceNotFoundError.create("SubmodelService", f'idShort={id_short}')
     

@@ -466,6 +466,11 @@ class SubmodelElement(Referable, HasSemantics, Qualifiable, HasDataSpecification
     def embeddedDataSpecifications(self) -> list[EmbeddedDataSpecification]:
         objs = self.fields.get('embeddedDataSpecification')
         return objs if objs else []
+
+    @property
+    @abstractmethod
+    def value(self) -> Any:
+        pass
     
     @abstractmethod
     def read_value(self) -> Any:

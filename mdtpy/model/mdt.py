@@ -53,27 +53,31 @@ class MDTParameterDescriptor:
 
     Attributes:
     -----------
-    name : str
+    id: str
+        The id of the parameter.
+    name : Optional[str]
         The name of the parameter.
     valueType : str
         The type of the parameter value.
     """
-    name: str
+    id: str
+    name: Optional[str]
     valueType: str
     
 @dataclass_json
 @dataclass(frozen=True, unsafe_hash=True, slots=True)
-class NamedValueType:
-    name: str
+class ArgumentDescriptor:
+    id: str
     valueType: str
+    reference: str
     
 @dataclass_json
 @dataclass(frozen=True, unsafe_hash=True, slots=True)
 class MDTOperationDescriptor:
-    name: str
+    id: str
     operationType: str
-    inputArguments: list[NamedValueType]
-    outputArguments: list[NamedValueType]
+    inputArguments: list[ArgumentDescriptor]
+    outputArguments: list[ArgumentDescriptor]
 
 @dataclass_json
 @dataclass(frozen=True, unsafe_hash=True, slots=True)

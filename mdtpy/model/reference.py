@@ -123,8 +123,10 @@ class DefaultElementReference(ElementReference):
     
 
 class ElementReferenceCollection:
-    def __init__(self, references:dict[str,ElementReference]=OrderedDict()):
+    def __init__(self, references:dict[str,ElementReference]=OrderedDict(),
+                    element_type:str="ElementReference"):
         self._references = references
+        self._element_type = element_type
 
     def __iter__(self):
         return iter((key, ref) for key, ref in self._references.items())
@@ -159,13 +161,13 @@ class ElementReferenceCollection:
             try:
                 return self._references[key]
             except KeyError:
-                raise ResourceNotFoundError.create("ElementReference", f'key={key}')
+                raise ResourceNotFoundError.create(self._element_type, f'key={key}')
         elif isinstance(key, int):
             ref_list = list(self._references.values())
             try:
-                return ref_list[index]
+                return ref_list[key]
             except Exception:
-                raise ResourceNotFoundError.create("ElementReference", f'index={index}')
+                raise ResourceNotFoundError.create(self._element_type, f'index={key}')
         else:
             raise ValueError(f'Invalid ElementReference key: {key}')
     

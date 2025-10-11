@@ -211,15 +211,16 @@ class DataSubmodelServiceClient(HttpSubmodelServiceClient, DataService):
         super().__init__(instance_id=instance_id, sm_desc=sm_desc, url=url)
         self._asset_type = asset_type
         
-        param_keys = [self._to_param_id(smc) for smc in self.getSubmodelElementByPath(f'DataInfo.{asset_type}.{asset_type}Parameters').value]
+        param_keys = [self._get_parameter_id(smc) for smc in self.getSubmodelElementByPath(f'DataInfo.{asset_type}.{asset_type}Parameters').value]
         mappings = OrderedDict()
         for idx, key in enumerate(param_keys):
             svc = HttpSubmodelServiceClient(instance_id=instance_id, sm_desc=sm_desc, url=url)
-            path = f'DataInfo.{asset_type}.{asset_type}ParameterValues[{idx}]'
+            path = f'DataInfo.{asset_type}.{asset_type}ParameterValues[{idx}].ParameterValue'
             mappings[key] = DefaultElementReference(svc, path)
-        self._parameters = ElementReferenceCollection(mappings)
+        self._parameters = ElementReferenceCollection(mappings,
+                                                        element_type=f'{instance_id}.Parameter')
             
-    def _to_param_id(self, param:SubmodelElementCollection) -> str:
+    def _get_parameter_id(self, param:SubmodelElementCollection) -> str:
         for prop in param.value:
             if prop.idShort == 'ParameterID':
                 return prop.value
