@@ -1,0 +1,25 @@
+
+from airflow.sdk import dag, task
+from mdtpy.airflow import OperationSubmodelInvocation, task_output, reference
+
+@dag
+def {{ dag_id }}():
+{% for tmplt in task_templates %}
+  @task
+  def {{ tmplt.task_id }}() -> None:
+    OperationSubmodelInvocation(
+      instance = "{{ tmplt.instance }}",
+      submodel = "{{ tmplt.submodel }}",
+      arguments = {
+        {% for arg_id, arg in tmplt.arguments.items() %}
+        {% if arg.type == "task_output" %}"{{ arg_id }}": {{ arg.type }}("{{ arg.value[0] }}", "{{ arg.value[1] }}")
+        {% elif arg.type == "reference" %}"{{ arg_id }}": {{ arg.type }}("{{ arg.value }}")
+        {% endif %}{% endfor %}
+      }
+    ).run()
+{% endfor %}
+  ({% for tmplt in task_templates %}
+    {{ tmplt.task_id }}(){% if not loop.last %} >>{% endif %}{% endfor %}
+  )
+
+{{ dag_id }}()

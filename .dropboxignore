@@ -1,3 +1,6 @@
 .git/
 .gradle/
 *.egg-info/
+build/
+dist/
+*.lock

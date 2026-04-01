@@ -1,0 +1,20 @@
+[project]
+name = "mdtpy"
+version = "0.2.1"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "basyx-python-sdk>=2.0.0,<3.0.0",
+    "dataclass-wizard==0.22",
+    "isodate>=0.7.2",
+    "jinja2>=3.1.6",
+    "pandas>=2.3.3",
+    "requests>=2.32.5",
+    "requests-toolbelt>=1.0.0",
+    "tika>=3.1.0",
+    "urllib3>=2.6.2,<3.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

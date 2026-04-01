@@ -1,3 +1,0 @@
-dataclasses-json
-requests
-requests-toolbelt
