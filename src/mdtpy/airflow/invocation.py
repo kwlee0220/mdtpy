@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, TypedDict, NotRequired
+from typing import Optional, TypedDict
+from typing_extensions import NotRequired
 
 from abc import ABC, abstractmethod
 

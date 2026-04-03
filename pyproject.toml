@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "mdtpy"
 version = "0.2.1"
@@ -13,6 +17,7 @@ dependencies = [
     "requests>=2.32.5",
     "requests-toolbelt>=1.0.0",
     "tika>=3.1.0",
+    "typing_extensions>=4.2.0",
     "urllib3>=2.6.2,<3.0.0",
 ]
 

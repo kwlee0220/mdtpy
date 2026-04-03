@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Union, Optional, TypedDict, NotRequired, cast
+from typing import Any, Union, Optional, TypedDict, cast
 from collections.abc import Mapping
 
 from datetime import timedelta
