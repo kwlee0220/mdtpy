@@ -255,22 +255,17 @@ class DefaultElementReference(ElementReference):
   def put_attachment(self, file_path:str, content_type:Optional[str]=None) -> None:
     import os
     from .value import to_file_value
-    from requests_toolbelt.multipart.encoder import MultipartEncoder
 
     file_value = to_file_value(file_path, content_type=content_type)
     self.update_value(file_value)
-    
+
     url = f'{self.endpoint}/attachment'
     file_name = os.path.basename(file_path)
     content_type = file_value['content_type']
-    m = MultipartEncoder(
-      fields={
-        'fileName': file_name,
-        'contentType': content_type,
-        'content': ('filename', open(file_path, 'rb'), content_type)
-      }
-    )
-    requests.put(url, data=m, headers={'Content-Type': m.content_type}, verify=False)
+    with open(file_path, 'rb') as f:
+      files = {'content': (file_name, f, content_type)}
+      data = {'fileName': file_name, 'contentType': content_type}
+      requests.put(url, files=files, data=data, timeout=60)
       
   def delete_attachment(self) -> None:
     file_sme = (cast(model.File, self.prototype))

@@ -1,0 +1,100 @@
+# =========================
+# ROS2 build artifacts
+# =========================
+install/
+log/
+
+# colcon build cache
+.colcon/
+
+# =========================
+# ROS bag files (very large)
+# =========================
+*.bag
+*.db3
+
+# =========================
+# Python cache
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+
+# =========================
+# Python packaging (uv build / setuptools)
+# =========================
+build/
+dist/
+wheels/
+*.egg-info/
+**/*.egg-info/
+.eggs/
+
+# =========================
+# Virtual environments
+# =========================
+venv/
+.env/
+.envrc
+
+# =========================
+# IDE / Editor files
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Git
+# =========================
+.git/
+
+# =========================
+# Images / Media (optional)
+# =========================
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.avi
+
+# =========================
+# Logs / temp
+# =========================
+*.log
+tmp/
+temp/
+
+# =========================
+# Generated message files
+# =========================
+rosidl_generator_py/
+rosidl_generator_cpp/
+rosidl_typesupport_*/
+
+# =========================
+# CMake artifacts
+# =========================
+CMakeFiles/
+CMakeCache.txt
+Makefile
+
+# =========================
+# Node modules (if mixed project)
+# =========================
+node_modules/
+
+# =========================
+# Large datasets (custom)
+# =========================
+data/
+datasets/
+weights/
+models/
+
+# =========================
+# Docker
+# =========================
+*.tar
+docker_images/

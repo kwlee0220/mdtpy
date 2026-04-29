@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-from typing import Any, cast, Optional, Mapping
-
-from collections.abc import Iterator, Collection
-from dataclasses import dataclass
-from dataclass_wizard import JSONWizard
 import datetime
-from basyx.aas import model
+from typing import Any, Optional
+from urllib.parse import quote
 
-from mdtpy.basyx.serde import from_json
+from basyx.aas import model
 
 from .submodel import SubmodelService
 from .descriptor import MDTOperationDescriptor, MDTSubmodelDescriptor, ArgumentDescriptor
 from .reference import ElementReference, DefaultElementReference, ElementReferenceDict
-from .value import update_element_with_value, ElementValueType, get_value, ElementValueDict, update_value_dict, ElementJsonValueType
+from .value import update_element_with_value, ElementValueType, get_value, ElementValueDict, \
+                   update_value_dict
 from .aas_misc import OperationVariable
-from .exceptions import OperationError
+from .exceptions import MDTException, OperationError
 
 
 def get_argument_value(arg:ElementReference|ElementValueType|model.SubmodelElement) -> Optional[ElementValueType]:
@@ -31,7 +28,10 @@ class AASOperationService:
   def __init__(self, submodel_svc:SubmodelService, operation_path:str) -> None:
     self.__submodel_svc = submodel_svc
     self.__operation_path = operation_path
-    operation = cast(model.Operation, submodel_svc.submodel_elements[operation_path])
+    sme = submodel_svc.submodel_elements[operation_path]
+    if not isinstance(sme, model.Operation):
+      raise ValueError(f"not an Operation: path={operation_path}, type={type(sme).__name__}")
+    operation = sme
     self.in_op_variables = [ OperationVariable(value=var) for var in operation.input_variable ]
     self.inout_op_variables = [ OperationVariable(value=var) for var in operation.in_output_variable ]
     self.out_op_variables = [ OperationVariable(value=var) for var in operation.output_variable ]
@@ -79,9 +79,20 @@ class AASOperationService:
 
 class Argument(DefaultElementReference):
   def __init__(self, op_submodel_svc:OperationSubmodelService, desc:ArgumentDescriptor) -> None:
+    encoded_path = quote(desc.id_short_path, safe="")
     super().__init__(ref_string=desc.reference,
-                     endpoint=f'{op_submodel_svc.service_endpoint}/submodel-elements/{desc.id_short_path}')
-    self.descriptor = desc
+                     endpoint=f'{op_submodel_svc.service_endpoint}/submodel-elements/{encoded_path}')
+    self.__descriptor = desc
+
+  @property
+  def descriptor(self) -> ArgumentDescriptor:
+    """
+    인자 등록정보를 반환한다.
+
+    Returns:
+      ArgumentDescriptor: 인자 등록정보.
+    """
+    return self.__descriptor
 
   @property
   def id(self) -> str:
@@ -91,12 +102,18 @@ class Argument(DefaultElementReference):
     Returns:
       str: 인자 식별자.
     """
-    return self.descriptor.id
+    return self.__descriptor.id
 
 
 class ArgumentList(ElementReferenceDict[Argument]):
-  def __init__(self, op_submodel_svc:OperationSubmodelService, arg_desc_list:list[ArgumentDescriptor]):
-    super().__init__({ desc.id:Argument(op_submodel_svc, desc) for desc in arg_desc_list })
+  def __init__(self, op_submodel_svc:OperationSubmodelService,
+               arg_desc_list:list[ArgumentDescriptor]):
+    arg_dict: dict[str, Argument] = {}
+    for desc in arg_desc_list:
+      if desc.id in arg_dict:
+        raise MDTException(f"Duplicate Argument id: {desc.id}")
+      arg_dict[desc.id] = Argument(op_submodel_svc, desc)
+    super().__init__(arg_dict)
     self.__arg_desc_list = arg_desc_list
 
   def __getitem__(self, arg_id: str|int) -> Argument:
@@ -115,13 +132,15 @@ class ArgumentList(ElementReferenceDict[Argument]):
 
 
 class OperationSubmodelService(SubmodelService):
-  def __init__(self, instance_id:str, sm_desc:MDTSubmodelDescriptor, op_desc:MDTOperationDescriptor) -> None:
+  def __init__(self, instance_id:str, sm_desc:MDTSubmodelDescriptor,
+               op_desc:MDTOperationDescriptor) -> None:
     super().__init__(instance_id, sm_desc)
     self.__op_desc = op_desc
     self.input_arguments = ArgumentList(self, op_desc.input_arguments)
     self.output_arguments = ArgumentList(self, op_desc.output_arguments)
     self.op = AASOperationService(self, 'Operation')
 
+  @property
   def operation_descriptor(self) -> MDTOperationDescriptor:
     """
     연산의 등록정보를 반환한다.
@@ -138,10 +157,11 @@ class OperationSubmodelService(SubmodelService):
     Args:
       kwargs: Any: 연산 인자 값을 전달하는 keyword 기반 인자.
         - 연산 식별자를 키로하는 dictionary.
-        - 연산 인자 값은 전달할 값을 지정하던 ElementReference 혹은 ElementValueType 형태로 지정한다.
+        - 연산 인자 값은 전달할 값을 지정하던 ElementReference 혹은 ElementValueType 형태로
+          지정한다.
     
     Returns:
-      ArgumentList: 연산 출력 인자 목록.
+      ElementValueDict: 연산 출력 인자 값 목록.
     """
     input_arg_values = self.input_arguments.read_value()
     update_value_dict(input_arg_values, kwargs)

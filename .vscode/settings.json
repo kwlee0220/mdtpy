@@ -6,6 +6,15 @@
     ],
     "cursorpyright.analysis.extraPaths": [
         "${workspaceFolder}/src"
-    ]
+    ],
+    "chat.tools.terminal.autoApprove": {
+        "set": true,
+        "command": true
+    },
+    "editor.rulers": [100, 110],
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "workbench.tree.indent": 14
 }
 
