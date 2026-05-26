@@ -2,7 +2,19 @@ from __future__ import annotations
 
 import requests
 
-from .exceptions import MDTException, RemoteError
+from .exceptions import (
+    MDTException, RemoteError,
+    ResourceNotFoundError, InvalidResourceStateError, ResourceAlreadyExistsError,
+)
+
+
+# 서버 'code' 문자열 → 대응되는 MDTException 하위 타입 매핑.
+# 모두 동일하게 json_obj['message']를 메시지로 사용하는 분기들만 모은다.
+_CODE_TO_EXCEPTION: dict[str, type[MDTException]] = {
+    'mdt.model.ResourceNotFoundException':      ResourceNotFoundError,
+    'mdt.model.InvalidResourceStatusException': InvalidResourceStateError,
+    'mdt.model.ResourceAlreadyExistsException': ResourceAlreadyExistsError,
+}
 
 
 def parse_none_response(resp: requests.Response) -> None:
@@ -93,12 +105,13 @@ def to_exception(resp: requests.Response) -> MDTException:
            (JSON 파싱 시도하지 않음).
         2. JSON 본문에 `messages` 키가 있으면 첫 메시지의 `text`로 RemoteError 반환.
         3. JSON 본문에 `code` 키가 있고 알려진 매핑에 해당하면:
-           - `java.lang.IllegalArgumentException`,
-             `java.lang.NullPointerException`,
-             `java.lang.UnsupportedOperationException`,
-             `org.springframework.*` 계열 → 직접 RemoteError raise.
-           - `utils.InternalException`         → RemoteError 반환.
-           - `mdt.model.ResourceNotFoundException` → ResourceNotFoundError raise.
+           - `_CODE_TO_EXCEPTION` 매핑에 포함된 코드 (`java.lang.IllegalArgumentException`,
+             `utils.InternalException`, `mdt.model.*` 계열) →
+             해당 MDTException 하위 타입을 `json_obj['message']`로 raise.
+           - `java.lang.NullPointerException`,
+             `java.lang.UnsupportedOperationException` → `code=..., message=...`
+             포맷의 RemoteError raise.
+           - `org.springframework.*` 계열 → `json_obj['text']`로 RemoteError raise.
         4. 위 모두에 해당하지 않으면 (알 수 없는 code 포함) `resp.text` 또는
            가능한 경우 본문 정보를 담은 RemoteError로 폴백.
 
@@ -138,10 +151,14 @@ def to_exception(resp: requests.Response) -> MDTException:
     # 3. code 키 (알려진 매핑만 처리)
     if isinstance(json_obj, dict) and 'code' in json_obj:
         code = json_obj['code']
-        if code == 'java.lang.IllegalArgumentException':
-            raise RemoteError(json_obj['message'])
+        if code in _CODE_TO_EXCEPTION:
+            raise _CODE_TO_EXCEPTION[code](json_obj['message'])
+        elif code == 'java.lang.IllegalArgumentException':
+            details = json_obj.get('message', '')
+            raise RemoteError(f"IllegalArgumentError: {details}")
         elif code == 'utils.InternalException':
-            return RemoteError(json_obj['message'])
+            details = json_obj.get('message', '')
+            raise RemoteError(f"InternalException: {details}")
         elif code in (
             'java.lang.NullPointerException',
             'java.lang.UnsupportedOperationException',
@@ -152,9 +169,6 @@ def to_exception(resp: requests.Response) -> MDTException:
             'org.springframework.web.HttpRequestMethodNotSupportedException',
         ):
             raise RemoteError(json_obj['text'])
-        elif code == 'mdt.model.ResourceNotFoundException':
-            from .exceptions import ResourceNotFoundError
-            raise ResourceNotFoundError(json_obj['message'])
         # 알려지지 않은 code → 안전한 폴백 (동적 import 제거)
         message_text = json_obj.get('message') or json_obj.get('text') or resp.text
         return RemoteError(f"code={code}, message={message_text}")

@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mdtpy"
-version = "0.2.2"
-description = "Add your description here"
+version = "0.2.3"
+description = "MDTPlatform을 python 언어를 통해 활용할 수 있는 라이브러리를 제공한다."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "basyx-python-sdk>=2.0.0,<3.0.0",
-    "dataclass-wizard==0.22",
+    "dataclass-wizard>=0.22,<1",
     "isodate>=0.7.2",
     "jinja2>=3.1.6",
     "pandas>=2.3.3",
@@ -22,6 +22,8 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["mdtpy*"]
+exclude = ["samples*"]
 
 [dependency-groups]
 dev = [

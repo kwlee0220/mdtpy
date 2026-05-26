@@ -32,8 +32,8 @@ from .http_client import parse_response, parse_list_response, parse_none_respons
 from .exceptions import InvalidResourceStateError, ResourceNotFoundError
 
 
-mdt_inst_url:Optional[str] = None
-mdt_manager:Optional[MDTInstanceManager] = None
+mdt_inst_url: Optional[str] = None
+mdt_manager: Optional[MDTInstanceManager] = None
 
 
 DEFAULT_TIMEOUT = 30
@@ -187,7 +187,7 @@ class MDTInstanceCollection:
         inst_desc_list = parse_list_response(resp, InstanceDescriptor)
         return iter(MDTInstance(inst_desc, self.__inst_url) for inst_desc in inst_desc_list)
     
-    def __contains__(self, instance_id:str) -> bool:
+    def __contains__(self, instance_id: str) -> bool:
         """
         주어진 식별자에 해당하는 MDTInstance 존재 여부를 반환한다.
 
@@ -205,7 +205,7 @@ class MDTInstanceCollection:
         parse_none_response(resp)
         return True
 
-    def __getitem__(self, instance_id:str) -> MDTInstance:
+    def __getitem__(self, instance_id: str) -> MDTInstance:
         """
         주어진 식별자에 해당하는 MDTInstance를 반환한다.
 
@@ -225,7 +225,7 @@ class MDTInstanceCollection:
         inst_desc: InstanceDescriptor = parse_response(resp, InstanceDescriptor)  # type: ignore
         return MDTInstance(inst_desc, self.__inst_url)
         
-    def find(self, condition:str) -> Generator[MDTInstance, None, None]:
+    def find(self, condition: str) -> Generator[MDTInstance, None, None]:
         """
         MDTInstance 목록에 포함된 MDTInstance 중에서 주어진 조건에 맞는 것들을 반환한다.
 
@@ -234,11 +234,11 @@ class MDTInstanceCollection:
         Returns:
             Generator[MDTInstance, None, None]: MDTInstance 생산자.
         """
-        resp = _get(self.__url_prefix, params={'filter': f"{condition}"})
+        resp = _get(self.__url_prefix, params={'filter': condition})
         inst_desc_list = parse_list_response(resp, InstanceDescriptor)
         return (MDTInstance(inst_desc, self.__inst_url) for inst_desc in inst_desc_list)
         
-    def add(self, instance_id:str, port:int, inst_dir:str) -> MDTInstance:
+    def add(self, instance_id: str, port: int, inst_dir: str) -> MDTInstance:
         """
         MDTInstance 목록에 MDTInstance를 추가한다.
 
@@ -268,7 +268,7 @@ class MDTInstanceCollection:
         inst_desc: InstanceDescriptor = parse_response(resp, InstanceDescriptor)  # type: ignore
         return MDTInstance(inst_desc, self.__inst_url)
         
-    def __delitem__(self, instance_id:str) -> None:
+    def __delitem__(self, instance_id: str) -> None:
         """
         MDTInstance 목록에서 주어진 식별자에 해당하는 MDTInstance를 제거한다.
 
@@ -281,7 +281,7 @@ class MDTInstanceCollection:
         resp = _delete(url)
         parse_none_response(resp)
 
-    def remove(self, instance_id:str) -> None:
+    def remove(self, instance_id: str) -> None:
         """
         MDTInstance 목록에서 주어진 식별자에 해당하는 MDTInstance를 제거한다.
 
@@ -302,7 +302,7 @@ class MDTInstanceCollection:
 
 
 class MDTInstance:
-    def __init__(self, descriptor:InstanceDescriptor, mdt_inst_url: str) -> None:
+    def __init__(self, descriptor: InstanceDescriptor, mdt_inst_url: str) -> None:
         self.__descriptor = descriptor
         self.__instance_url = f"{mdt_inst_url}/instances/{quote(descriptor.id, safe='')}"
 
@@ -434,7 +434,7 @@ class MDTInstance:
 
         url = f"{self.__instance_url}/model/submodels"
         resp = _get(url)
-        return { desc.id_short:desc for desc in parse_list_response(resp, MDTSubmodelDescriptor) }
+        return { desc.id_short: desc for desc in parse_list_response(resp, MDTSubmodelDescriptor) }
 
     @property
     def operation_descriptors(self) -> dict[str, MDTOperationDescriptor]:
@@ -449,7 +449,7 @@ class MDTInstance:
 
         url = f"{self.__instance_url}/model/operations"
         resp = _get(url)
-        return { desc.id:desc for desc in parse_list_response(resp, MDTOperationDescriptor) }
+        return { desc.id: desc for desc in parse_list_response(resp, MDTOperationDescriptor) }
 
     @property
     def submodel_services(self) -> SubmodelServiceCollection[SubmodelService]:
@@ -564,6 +564,12 @@ class MDTInstance:
         return self.descriptor
 
     def read_asset_administration_shell(self) -> model.AssetAdministrationShell:
+        """
+        MDTInstance의 Asset Administration Shell을 읽어 반환한다.
+
+        Returns:
+            model.AssetAdministrationShell: MDTInstance의 Asset Administration Shell.
+        """
         import mdtpy.fa3st as fa3st
         aas_id_encoded = fa3st.encode_base64url(self.descriptor.aas_id)
         url = f"{self.descriptor.base_endpoint}/shells/{aas_id_encoded}"
@@ -593,7 +599,7 @@ class MDTInstance:
 
 
 class StatusPoller(ABC):
-    def __init__(self, poll_interval:float, timeout:Optional[float]=None) -> None:
+    def __init__(self, poll_interval: float, timeout: Optional[float] = None) -> None:
         """
         StatusPoller를 초기화한다.
 
@@ -624,7 +630,7 @@ class StatusPoller(ABC):
         # 타임아웃 (self.timeout)이 있는 경우 최종 제한 시간을 계산하고,    
         # 타임아웃이 없는 경우 due를 None으로 설정하여 무제한 대기하도록 한다.
         started = time.time()
-        due = started + self.timeout if self.timeout else None
+        due = (started + self.timeout) if self.timeout else None
         # 다음 폴링 시간을 계산한다.
         next_wakeup = started + self.poll_interval
         
@@ -640,11 +646,16 @@ class StatusPoller(ABC):
             sleep_time = next_wakeup - now
             if sleep_time > 0.001:
                 time.sleep(sleep_time)
+            # is_done() 한 번 수행에 poll_interval 이상이 소요된 경우 next_wakeup이
+            # 현재 시각보다 뒤처질 수 있으므로, 현재 시각을 앞지를 때까지 따라잡는다.
             next_wakeup += self.poll_interval
+            now = time.time()
+            while next_wakeup <= now:
+                next_wakeup += self.poll_interval
 
 class InstanceStartPoller(StatusPoller):
-    def __init__(self, status_url:str, init_desc:InstanceDescriptor,
-                                poll_interval:float=1.0, timeout:Optional[float]=None) -> None:
+    def __init__(self, status_url: str, init_desc: InstanceDescriptor,
+                                poll_interval: float = 1.0, timeout: Optional[float] = None) -> None:
         super().__init__(poll_interval=poll_interval, timeout=timeout)
         self.status_url = status_url
         self.desc = init_desc
@@ -666,8 +677,8 @@ class InstanceStartPoller(StatusPoller):
             return True
         
 class InstanceStopPoller(StatusPoller):
-    def __init__(self, status_url:str, init_desc:InstanceDescriptor,
-                                poll_interval:float=1.0, timeout:Optional[float]=None) -> None:
+    def __init__(self, status_url: str, init_desc: InstanceDescriptor,
+                                poll_interval: float = 1.0, timeout: Optional[float] = None) -> None:
         super().__init__(poll_interval=poll_interval, timeout=timeout)
         self.status_url = status_url
         self.desc = init_desc

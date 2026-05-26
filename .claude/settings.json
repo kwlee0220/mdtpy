@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /home/kwlee/development/mdtpy/mdtpy/src/mdtpy/*.py)"
+    ]
+  }
+}
