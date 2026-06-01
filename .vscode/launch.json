@@ -1,11 +1,24 @@
 {
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Python: sample_mcp.py",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/samples/sample_mcp.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Python: sample_inspector_simulation.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/samples/sample_inspector_simiulation.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "python": "${workspaceFolder}/.venv/bin/python",
@@ -26,7 +39,7 @@
             }
         },
         {
-            "name": "Python sample_parameter.py",
+            "name": "Python: sample_parameter.py",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/samples/sample_parameter.py",
@@ -38,7 +51,7 @@
             }
         },
         {
-            "name": "Python sample_operation.py",
+            "name": "Python: sample_operation.py",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/samples/sample_operation.py",
@@ -50,7 +63,7 @@
             }
         },
         {
-            "name": "Python sample_submodels.py",
+            "name": "Python: sample_submodels.py",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/samples/sample_submodels.py",

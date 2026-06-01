@@ -25,16 +25,16 @@ defect = inspection.output_arguments['Defect']
 
 
 def inspect(image_file_path: str):
-  # 표면 검사용 이미지 등록
-  print(f"Inspecting {image_file_path}...")
-  upper_image.put_attachment(image_file_path)
-  
-  started = datetime.now()
-  inspection.invoke(UpperImage=upper_image, Defect=defect)
-  update.invoke(DefectList=defect_list, Defect=defect, UpdatedDefectList=defect_list)
-  simulate.invoke(DefectList=defect_list, AverageCycleTime=cycle_time)
-  elapsed = datetime.now() - started
-  print(f"Elapsed time: {elapsed.total_seconds():.3f} seconds")
+    # 표면 검사용 이미지 등록
+    print(f"Inspecting {image_file_path}...")
+    upper_image.put_attachment(image_file_path)
+
+    started = datetime.now()
+    inspection.invoke(UpperImage=upper_image, Defect=defect)
+    update.invoke(DefectList=defect_list, Defect=defect, UpdatedDefectList=defect_list)
+    simulate.invoke(DefectList=defect_list, AverageCycleTime=cycle_time)
+    elapsed = datetime.now() - started
+    print(f"Elapsed time: {elapsed.total_seconds():.3f} seconds")
 
 
 def main():

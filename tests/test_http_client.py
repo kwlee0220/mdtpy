@@ -156,17 +156,18 @@ class TestToException:
 
     # ----- code 분기: 명시적으로 매핑된 케이스 ----- #
 
-    def test_illegal_argument_raises_remote_error(self):
-        """`java.lang.IllegalArgumentException`은 직접 raise한다."""
+    def test_illegal_argument_returns_remote_error(self):
+        """`java.lang.IllegalArgumentException`은 RemoteError를 반환한다."""
         resp = make_response(
             json_data={"code": "java.lang.IllegalArgumentException",
                        "message": "bad arg"}
         )
-        with pytest.raises(RemoteError, match="bad arg"):
-            to_exception(resp)
+        exc = to_exception(resp)
+        assert isinstance(exc, RemoteError)
+        assert "bad arg" in str(exc)
 
     def test_internal_exception_returns_remote_error(self):
-        """`utils.InternalException`은 RemoteError를 반환한다 (raise 아님)."""
+        """`utils.InternalException`은 RemoteError를 반환한다."""
         resp = make_response(
             json_data={"code": "utils.InternalException", "message": "internal"}
         )
@@ -178,12 +179,12 @@ class TestToException:
         "code",
         ["java.lang.NullPointerException", "java.lang.UnsupportedOperationException"],
     )
-    def test_npe_and_unsupported_op_raise(self, code):
+    def test_npe_and_unsupported_op_return(self, code):
         resp = make_response(json_data={"code": code, "message": "msg"})
-        with pytest.raises(RemoteError) as excinfo:
-            to_exception(resp)
-        assert code in str(excinfo.value)
-        assert "msg" in str(excinfo.value)
+        exc = to_exception(resp)
+        assert isinstance(exc, RemoteError)
+        assert code in str(exc)
+        assert "msg" in str(exc)
 
     @pytest.mark.parametrize(
         "code",
@@ -192,18 +193,20 @@ class TestToException:
             "org.springframework.web.HttpRequestMethodNotSupportedException",
         ],
     )
-    def test_spring_exceptions_raise_with_text(self, code):
+    def test_spring_exceptions_return_with_text(self, code):
         resp = make_response(json_data={"code": code, "text": "spring err"})
-        with pytest.raises(RemoteError, match="spring err"):
-            to_exception(resp)
+        exc = to_exception(resp)
+        assert isinstance(exc, RemoteError)
+        assert "spring err" in str(exc)
 
-    def test_resource_not_found_raises_resource_not_found_error(self):
+    def test_resource_not_found_returns_resource_not_found_error(self):
         resp = make_response(
             json_data={"code": "mdt.model.ResourceNotFoundException",
                        "message": "missing"}
         )
-        with pytest.raises(ResourceNotFoundError, match="missing"):
-            to_exception(resp)
+        exc = to_exception(resp)
+        assert isinstance(exc, ResourceNotFoundError)
+        assert "missing" in str(exc)
 
     # ----- code 분기: 동적 import 경로 ----- #
 

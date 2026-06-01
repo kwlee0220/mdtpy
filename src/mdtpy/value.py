@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import mimetypes
 from typing import TYPE_CHECKING, Union, Optional, TypedDict, cast
 from collections.abc import Mapping
 
@@ -120,20 +121,20 @@ def to_file_value(path: str, content_type: Optional[str] = None) -> FileValue:
     """
     파일 경로로부터 `FileValue` TypedDict를 만든다.
 
-    `content_type`이 주어지지 않으면 Tika가 파일을 읽어 MIME type을
-    추정한다 (Tika 서버 또는 로컬 모드 의존).
+    `content_type`이 주어지지 않으면 파일명(확장자)으로부터 MIME type을
+    추정한다 (`mimetypes.guess_type`). 확장자로 판별되지 않으면
+    `application/octet-stream`을 사용한다.
 
     Args:
         path (str): 파일 경로.
         content_type (Optional[str]): 명시적 MIME type.
-            None이면 Tika로 자동 추정.
+            None이면 파일명(확장자)으로 자동 추정.
     Returns:
         FileValue: `{'content_type': str, 'value': <파일명>}`.
     """
     if content_type is None:
-        from tika import parser
-        parsed = parser.from_file(path)
-        mime_type = parsed["metadata"]["Content-Type"]  # type: ignore
+        guessed, _ = mimetypes.guess_type(path)
+        mime_type = guessed or "application/octet-stream"
     else:
         mime_type = content_type
     return {'content_type': mime_type, 'value': Path(path).name}

@@ -66,7 +66,8 @@ SetElementInvocation(
 ).run(ctx)
 ```
 
-`source` 키는 필수이다 (없으면 `ValueError`).
+`inputs`의 `source` 키는 필수이다 — 없으면 `ValueError("Input argument 'source' is required")`가 발생한다.
+(`argument_specs`의 `inputs` / `outputs`는 둘 다 생략 가능한 키이지만, `SetElementInvocation`은 `source` 입력을 반드시 요구한다.)
 
 ### `AASOperationTaskInvocation`
 

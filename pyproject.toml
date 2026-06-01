@@ -4,10 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mdtpy"
-version = "0.2.3"
-description = "MDTPlatform을 python 언어를 통해 활용할 수 있는 라이브러리를 제공한다."
+version = "0.2.5"
+description = "A Python client library for the MDT (Manufacturing Digital Twin) Platform."
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [{ name = "Kang-Woo Lee", email = "kwlee@etri.re.kr" }]
+keywords = ["MDT", "AAS", "digital-twin", "manufacturing", "basyx"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+]
 dependencies = [
     "basyx-python-sdk>=2.0.0,<3.0.0",
     "dataclass-wizard>=0.22,<1",
@@ -15,7 +25,6 @@ dependencies = [
     "jinja2>=3.1.6",
     "pandas>=2.3.3",
     "requests>=2.32.5",
-    "tika>=3.1.0",
     "typing_extensions>=4.2.0",
     "urllib3>=2.6.2,<3.0.0",
 ]

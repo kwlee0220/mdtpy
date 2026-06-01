@@ -8,8 +8,8 @@ manager = mdtpy.connect("http://localhost:12985/instance-manager")
 # 'test' 트윈에 접속한다.
 test = manager.instances['test']
 if not test.is_running():
-  test.start()
-  assert test.is_running()
+    test.start()
+    assert test.is_running()
 
 # 'AddAndSleep' AI Submodel을 획득한다.
 op = test.operations['AddAndSleep']

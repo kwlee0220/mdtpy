@@ -95,7 +95,7 @@ uv run --env-file .env pytest tests/test_instance.py::TestMDTInstanceCollection 
 > ROS가 source되지 않은 셸이라면 `uv run pytest`만으로도 충분하다.
 
 `tests/` 폴더의 단위 테스트는 외부 서버 의존 없이 mock으로 동작한다
-(300+ tests). `src/samples/sample_*.py` 스크립트들은 **실서버 대상 사용 예제 /
+(390+ tests). `src/samples/sample_*.py` 스크립트들은 **실서버 대상 사용 예제 /
 스모크 테스트**이므로 별도 환경에서 실행한다 (예: `python src/samples/sample_reference.py`).
 
 ### 코드 스타일
@@ -112,5 +112,47 @@ uv run --env-file .env pytest tests/test_instance.py::TestMDTInstanceCollection 
 ## 빌드
 
 ```bash
+rm -rf dist/           # 이전 산출물 정리
 uv build               # sdist + wheel을 dist/에 생성
+```
+
+빌드 결과는 다음으로 검증한다.
+
+```bash
+uv run --with twine twine check dist/*          # 메타데이터/README 렌더링 검사
+unzip -l dist/mdtpy-*.whl                        # samples 제외, mdtpy 패키지만 포함되는지 확인
+```
+
+## PyPI 등록
+
+### 1. 사전 준비
+
+- [PyPI](https://pypi.org) 계정을 생성하고, *Account settings → API tokens* 에서
+  API 토큰(`pypi-...`)을 발급받는다. 사전 검증용으로는
+  [TestPyPI](https://test.pypi.org)에도 별도 가입을 권장한다.
+- 새 릴리스마다 `pyproject.toml`의 `version`을 올린다. PyPI는 이미 업로드된
+  버전의 재업로드를 거부한다.
+
+### 2. (권장) TestPyPI 업로드 및 검증
+
+```bash
+uv run --with twine twine upload --repository testpypi dist/*
+uv run --with mdtpy --index-url https://test.pypi.org/simple/ \
+       --extra-index-url https://pypi.org/simple/ python -c "import mdtpy"
+```
+
+### 3. PyPI 정식 업로드
+
+```bash
+uv run --with twine twine upload dist/*
+```
+
+- 사용자명에 `__token__`, 비밀번호에 API 토큰을 입력한다. 자동화 시에는
+  `TWINE_USERNAME=__token__`, `TWINE_PASSWORD=pypi-...` 환경변수나 `~/.pypirc`를
+  사용한다.
+
+### 4. 설치 확인
+
+```bash
+pip install mdtpy      # 새 환경에서 설치 검증
 ```
