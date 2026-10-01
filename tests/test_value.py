@@ -246,6 +246,12 @@ class TestApplyTo:
         PropertyValue(None, model.datatypes.String).apply_to(prop)
         assert prop.value is None
 
+    def test_property_value_none_clears_numeric_value(self):
+        # 기존 값이 숫자여도 None을 int()/float()로 변환하지 않고 그대로 지운다.
+        prop = make_property(value=7, value_type=model.datatypes.Int)
+        PropertyValue(None, model.datatypes.Int).apply_to(prop)
+        assert prop.value is None
+
     def test_property_value_converts_timedelta_to_relativedelta(self):
         """timedelta 값은 `timedelta_to_relativedelta`로 변환되어 기록된다."""
         prop = make_property(value_type=model.datatypes.Duration)

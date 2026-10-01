@@ -96,6 +96,7 @@ class TestDagTaskArgument:
         # 대상이 File이 아니면 get()은 참조의 값을 읽어 반환한다.
         context = MagicMock()
         ref_obj = MagicMock(spec=ElementReference)
+        ref_obj.ref_string = "param:inst1:Temperature"
         ref_obj.read_value.return_value = mdt_value(42)
         context.resolve_reference.return_value = ref_obj
         spec = reference("param:inst1:Temperature")
@@ -106,10 +107,21 @@ class TestDagTaskArgument:
         # 대상이 File이면 get()은 값 대신 참조 자체를 반환한다(파일은 참조로 전달).
         context = MagicMock()
         ref_obj = MagicMock(spec=ElementReference)
+        ref_obj.ref_string = "param:inst1:UpperImage"
         ref_obj.read_value.return_value = MagicMock(spec=FileValue)
         context.resolve_reference.return_value = ref_obj
         spec = reference("param:inst1:UpperImage")
         assert spec.get(context) is ref_obj
+
+    def test_reference_returns_element_for_timeseries(self):
+        # 'timeseries:' 참조는 ElementValue가 아니라 SubmodelElement 자체를 반환한다.
+        context = MagicMock()
+        ref_obj = MagicMock(spec=ElementReference)
+        ref_obj.ref_string = "timeseries:inst1:WelderAmpereLog"
+        context.resolve_reference.return_value = ref_obj
+        spec = reference("timeseries:inst1:WelderAmpereLog")
+        assert spec.get(context) is ref_obj.read.return_value
+        ref_obj.read_value.assert_not_called()
 
 
 # --------------------------------------------------------------------------- #
@@ -224,25 +236,33 @@ class TestAirflowDagContext:
 # Operator  (task 본문)
 # --------------------------------------------------------------------------- #
 
-class TestCopyElementOperator:
+class TestSetElementOperator:
     def test_requires_source_at_construction(self):
-        # source가 None이면 DAG 정의(생성) 시점에 실패한다.
+        # 'source' 입력이 없으면 DAG 정의(생성) 시점에 실패한다.
         with pytest.raises(ValueError, match="'source' is required"):
-            SetElementOperator(None)
+            SetElementOperator(inputs={})
+
+    def test_outputs_without_target_rejected_at_construction(self):
+        # outputs를 지정했다면 'target'이 반드시 있어야 한다.
+        with pytest.raises(ValueError, match="'target' is required"):
+            SetElementOperator(inputs={"source": literal(3)},
+                               outputs={"dest": MagicMock(spec=ElementReference)})
 
     def test_literal_source_stored_as_task_output(self):
         context = MagicMock()
-        SetElementOperator(literal(3)).run(context)
+        SetElementOperator(inputs={"source": literal(3)}).run(context)
         context.set_task_outputs.assert_called_once_with({"target": mdt_value(3)})
 
     def test_reference_source_read_and_written_to_target(self):
         src_ref = MagicMock(spec=ElementReference)
+        src_ref.ref_string = "param:i:Src"
         src_ref.read_value.return_value = mdt_value(5)
         target = MagicMock(spec=ElementReference)
         context = MagicMock()
         context.resolve_reference.return_value = src_ref
 
-        SetElementOperator(reference("param:i:Src"), target=target).run(context)
+        SetElementOperator(inputs={"source": reference("param:i:Src")},
+                           outputs={"target": target}).run(context)
 
         src_ref.read_value.assert_called_once()
         target.update_value.assert_called_once_with(mdt_value(5))

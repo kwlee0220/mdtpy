@@ -129,7 +129,10 @@ class PropertyValue(ElementValue):
                 f"PropertyValue can only be applied to Property: got {type(element).__name__}")
 
         raw = self.to_raw_object()
-        if isinstance(element.value, int):
+        if raw is None:
+            # None은 기존 값의 타입으로 변환하지 않고 그대로 기록하여 값을 지운다.
+            element.value = None
+        elif isinstance(element.value, int):
             element.value = int(raw)  # type: ignore[assignment]
         elif isinstance(element.value, float):
             element.value = float(raw)  # type: ignore[assignment]
