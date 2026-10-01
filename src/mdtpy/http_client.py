@@ -61,8 +61,7 @@ def parse_response(resp: requests.Response, result_cls: type | None = None):
     if resp.status_code >= 200 and resp.status_code < 300:
         content_type = resp.headers['content-type']
         if content_type == 'application/json':
-            json = resp.json()
-            return result_cls.from_dict(json) if result_cls else json
+            return result_cls.from_dict(resp.json()) if result_cls else resp.text
         elif content_type.startswith('text/plain'):
             return resp.text
         else:

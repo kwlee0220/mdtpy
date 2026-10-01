@@ -2,17 +2,20 @@
 mdtpy.parameter 모듈의 클래스에 대한 단위 테스트.
 
 대상:
-    - MDTParameter        : DefaultElementReference 상속, descriptor 검증, 속성 위임
+    - MDTParameter        : BaseElementReference 상속, descriptor 검증, 속성 위임
     - MDTParameterCollection : 읽기 전용 Mapping, 중복 id 검출
 """
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
+import mdtpy.instance as instance_mod
 from mdtpy.descriptor import MDTParameterDescriptor
 from mdtpy.exceptions import MDTException
 from mdtpy.parameter import MDTParameter, MDTParameterCollection
-from mdtpy.reference import DefaultElementReference
+from mdtpy.ref import BaseElementReference
 
 
 # --------------------------------------------------------------------------- #
@@ -40,16 +43,21 @@ def make_param_desc(
 # --------------------------------------------------------------------------- #
 
 class TestMDTParameter:
-    def test_constructor_initializes_reference_endpoint_and_ref_string(self):
+    def test_constructor_initializes_reference_and_ref_string(self):
         desc = make_param_desc(
             id="p1",
             reference="param:test:p1",
             endpoint="http://srv/params/p1",
         )
         param = MDTParameter(desc)
-        assert isinstance(param, DefaultElementReference)
+        assert isinstance(param, BaseElementReference)
         assert param.ref_string == "param:test:p1"
-        assert param.endpoint == "http://srv/params/p1"
+        # service_url 은 descriptor.endpoint 가 아니라 전역 mdt_manager 질의 결과다.
+        mgr = MagicMock()
+        mgr.get_reference_service_url.return_value = "http://srv/params/p1"
+        instance_mod.mdt_manager = mgr  # conftest 가 테스트 후 원복한다.
+        assert param.service_url == "http://srv/params/p1"
+        mgr.get_reference_service_url.assert_called_once_with("param:test:p1")
 
     def test_constructor_rejects_none_endpoint_with_value_error(self):
         desc = make_param_desc(id="p-bad", endpoint=None)

@@ -140,31 +140,17 @@ class TestMDTInstanceManager:
         mgr = MDTInstanceManager(BASE_URL)
         assert isinstance(mgr.instances, MDTInstanceCollection)
 
-    def test_resolve_reference_empty_string_raises(self):
+    @patch("mdtpy.instance._get")
+    @patch("mdtpy.instance.parse_response")
+    def test_resolve_reference_empty_string_forwarded_to_server(self, mock_parse, mock_get):
+        # 참조 문자열 검증은 이제 서버 측에서 이뤄지므로, 빈 문자열도 클라이언트에서
+        # 예외를 던지지 않고 그대로 서버에 전달한다.
+        mock_get.return_value = make_response()
+        mock_parse.return_value = "http://endpoint/x"
         mgr = MDTInstanceManager(BASE_URL)
-        with pytest.raises(ValueError, match="Invalid reference"):
-            mgr.resolve_reference("")
-
-    def test_resolve_reference_param_wrong_arity_raises(self):
-        mgr = MDTInstanceManager(BASE_URL)
-        with pytest.raises(ValueError, match="parameter reference"):
-            mgr.resolve_reference("param:only-one-segment")
-        with pytest.raises(ValueError, match="parameter reference"):
-            mgr.resolve_reference("param:a:b:c")
-
-    def test_resolve_reference_oparg_wrong_arity_raises(self):
-        mgr = MDTInstanceManager(BASE_URL)
-        with pytest.raises(ValueError, match="operation argument"):
-            mgr.resolve_reference("oparg:i:o:in")  # 4 segments, need 5
-
-    def test_resolve_reference_oparg_invalid_direction_raises(self):
-        mgr = MDTInstanceManager(BASE_URL)
-        # operations[parts[2]] 까지는 진행되므로 instances 체인을 mock한다.
-        op = MagicMock()
-        with patch.object(MDTInstanceManager, "instances", new_callable=MagicMock) as m_insts:
-            m_insts.__getitem__.return_value.operations.__getitem__.return_value = op
-            with pytest.raises(ValueError, match="operation argument"):
-                mgr.resolve_reference("oparg:i:o:invalid:arg")
+        assert mgr.get_reference_service_url("") == "http://endpoint/x"
+        called_url = mock_get.call_args[0][0]
+        assert called_url == f"{BASE_URL}/references/$url?ref="
 
     @patch("mdtpy.instance._get")
     @patch("mdtpy.instance.parse_response")
@@ -172,9 +158,9 @@ class TestMDTInstanceManager:
         mock_get.return_value = make_response()
         mock_parse.return_value = "http://endpoint/x"
         mgr = MDTInstanceManager(BASE_URL)
-        ref = mgr.resolve_reference("custom-ref")
-        assert ref.ref_string == "custom-ref"
-        assert ref.endpoint == "http://endpoint/x"
+        # get_reference_service_url 은 서버가 해석한 서비스 URL 문자열을 그대로 반환한다.
+        service_url = mgr.get_reference_service_url("custom-ref")
+        assert service_url == "http://endpoint/x"
         # URL 쿼리 인자에 ref_string이 들어갔는지 확인
         called_url = mock_get.call_args[0][0]
         assert called_url.startswith(f"{BASE_URL}/references/$url?ref=")
@@ -399,12 +385,13 @@ class TestMDTInstanceProperties:
 
 
 class TestMDTInstanceCollections:
-    """parameters / submodel_descriptors / operation_descriptors 는
-    상태가 RUNNING이 아니면 InvalidResourceStateError를 발생시켜야 한다."""
+    """submodel_descriptors / submodel_services / operations 는
+    상태가 RUNNING이 아니면 InvalidResourceStateError를 발생시켜야 한다.
+    (parameters / operation_descriptors 는 상태 검증 없이 곧바로 서버에 질의한다.)"""
 
     @pytest.mark.parametrize(
         "attr",
-        ["parameters", "submodel_descriptors", "operation_descriptors"],
+        ["submodel_descriptors", "submodel_services", "operations"],
     )
     def test_property_raises_when_not_running(self, attr):
         inst = MDTInstance(make_descriptor(status=MDTInstanceStatus.STOPPED), BASE_URL)

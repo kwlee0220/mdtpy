@@ -403,7 +403,6 @@ wheels = [
 
 [[package]]
 name = "mdtpy"
-version = "0.2.5"
 source = { editable = "." }
 dependencies = [
     { name = "basyx-python-sdk" },

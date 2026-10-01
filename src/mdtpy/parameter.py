@@ -4,14 +4,14 @@ from typing import Iterable, Optional, Mapping, Iterator
 
 from .descriptor import MDTParameterDescriptor
 from .exceptions import MDTException
-from .reference import DefaultElementReference
+from .ref import BaseElementReference
 
 
-class MDTParameter(DefaultElementReference):
-    def __init__(self, descriptor: MDTParameterDescriptor):
+class MDTParameter(BaseElementReference):
+    def __init__(self, descriptor: MDTParameterDescriptor) -> None:
         if descriptor.endpoint is None:
-            raise ValueError(f"MDTParameterDescriptor.endpoint is None: id={descriptor.id}")
-        super().__init__(ref_string=descriptor.reference, endpoint=descriptor.endpoint)
+            raise ValueError(f"endpoint is None: parameter id={descriptor.id}")
+        super().__init__(descriptor.reference)
         self.__descriptor = descriptor
 
     @property
@@ -43,6 +43,16 @@ class MDTParameter(DefaultElementReference):
           Optional[str]: 파라미터 이름.
         """
         return self.__descriptor.name
+    
+    @property
+    def value_type(self) -> str:
+        """
+        파라미터 값의 데이터 유형을 반환한다.
+
+        Returns:
+          str: 파라미터 값의 데이터 유형.
+        """
+        return self.__descriptor.value_type
 
 
 class MDTParameterCollection(Mapping[str, MDTParameter]):

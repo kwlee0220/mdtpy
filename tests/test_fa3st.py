@@ -32,9 +32,11 @@ from mdtpy.fa3st import (
     Message,
     call_delete,
     call_get,
+    call_get_file,
     call_patch,
     call_post,
     call_put,
+    call_put_file,
     decode_base64url,
     encode_base64url,
     read_file_response,
@@ -221,6 +223,67 @@ class TestCallPut:
         mock_request.side_effect = requests.exceptions.ConnectionError("nope")
         with pytest.raises(MDTInstanceConnectionError):
             call_put("http://x", data="d")
+
+
+class TestCallGetFile:
+    @patch("mdtpy.fa3st.requests.get")
+    def test_returns_content_type_and_bytes(self, mock_get):
+        mock_get.return_value = make_response(
+            status_code=200, content=b"\x89PNG", content_type="image/png"
+        )
+        assert call_get_file("http://x/attachment") == ("image/png", b"\x89PNG")
+        kwargs = mock_get.call_args.kwargs
+        assert kwargs["verify"] is VERIFY_TLS
+        assert kwargs["timeout"] == DEFAULT_TIMEOUT
+
+    @patch("mdtpy.fa3st.requests.get")
+    def test_returns_none_for_204(self, mock_get):
+        mock_get.return_value = make_response(status_code=204)
+        assert call_get_file("http://x/attachment") is None
+
+    @patch("mdtpy.fa3st.requests.get")
+    def test_raises_mdt_exception_on_error_response(self, mock_get):
+        mock_get.return_value = make_response(
+            status_code=404,
+            json_data={"messages": [{"text": "missing"}]},
+        )
+        with pytest.raises(MDTException):
+            call_get_file("http://x/attachment")
+
+    @patch("mdtpy.fa3st.requests.get")
+    def test_connection_error_wrapped(self, mock_get):
+        mock_get.side_effect = requests.exceptions.ConnectionError("nope")
+        with pytest.raises(MDTInstanceConnectionError):
+            call_get_file("http://x/attachment")
+
+
+class TestCallPutFile:
+    @patch("mdtpy.fa3st.requests.put")
+    def test_sends_multipart_with_put_method(self, mock_put):
+        mock_put.return_value = make_response(status_code=204)
+        files = {"content": ("a.txt", b"data", "text/plain")}
+        data = {"fileName": "a.txt", "contentType": "text/plain"}
+        assert call_put_file("http://x/attachment", files, data) is None
+        kwargs = mock_put.call_args.kwargs
+        assert kwargs["files"] == files
+        assert kwargs["data"] == data
+        assert kwargs["verify"] is VERIFY_TLS
+        assert kwargs["timeout"] == 60.0
+
+    @patch("mdtpy.fa3st.requests.put")
+    def test_raises_mdt_exception_on_error_response(self, mock_put):
+        mock_put.return_value = make_response(
+            status_code=500,
+            json_data={"messages": [{"text": "upload failed"}]},
+        )
+        with pytest.raises(MDTException):
+            call_put_file("http://x/attachment", {"content": ("a.txt", b"d", "text/plain")})
+
+    @patch("mdtpy.fa3st.requests.put")
+    def test_connection_error_wrapped(self, mock_put):
+        mock_put.side_effect = requests.exceptions.ConnectionError("nope")
+        with pytest.raises(MDTInstanceConnectionError):
+            call_put_file("http://x/attachment", {"content": ("a.txt", b"d", "text/plain")})
 
 
 class TestCallPost:

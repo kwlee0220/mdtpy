@@ -4,7 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mdtpy"
-version = "0.2.5"
+# 버전의 단일 출처(SSOT)는 src/mdtpy/__init__.py 의 `__version__` 이다.
+# setuptools 가 해당 리터럴을 AST 로 정적 파싱하므로 빌드 시 패키지 import 는 발생하지 않는다.
+dynamic = ["version"]
 description = "A Python client library for the MDT (Manufacturing Digital Twin) Platform."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -28,6 +30,9 @@ dependencies = [
     "typing_extensions>=4.2.0",
     "urllib3>=2.6.2,<3.0.0",
 ]
+
+[tool.setuptools.dynamic]
+version = { attr = "mdtpy.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]

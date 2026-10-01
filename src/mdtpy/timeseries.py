@@ -5,13 +5,15 @@ from abc import ABC, abstractmethod
 from collections.abc import KeysView, ValuesView, ItemsView, Mapping
 from dataclasses import dataclass
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 
 from basyx.aas import model
 
-from .value import CollectionValueType, MultiLanguagePropertyValue
-from .reference import DefaultElementReference
+from mdtpy.utils import timedelta_to_iso8601
+
+from .value import CollectionValueType, RawMLPropertyValue, ElementCollectionValue
+from .ref import ElementReference, BaseElementReference
 from .descriptor import MDTSubmodelDescriptor
 from .submodel import SubmodelService
 
@@ -44,20 +46,20 @@ class Metadata:
     """
 
     def __init__(self, metadata_value: CollectionValueType) -> None:
-        self.__name = cast(MultiLanguagePropertyValue, metadata_value['Name'])
+        self.__name = cast(RawMLPropertyValue, metadata_value['Name'])
         self.__description = cast(
-            Optional[MultiLanguagePropertyValue], metadata_value['Description']
+            Optional[RawMLPropertyValue], metadata_value['Description']
         )
         self.__record = Record(
             "rec0", cast(CollectionValueType, metadata_value['Record'])
         )
 
     @property
-    def name(self) -> MultiLanguagePropertyValue:
+    def name(self) -> RawMLPropertyValue:
         return self.__name
 
     @property
-    def description(self) -> Optional[MultiLanguagePropertyValue]:
+    def description(self) -> Optional[RawMLPropertyValue]:
         return self.__description
 
     @property
@@ -138,12 +140,12 @@ class Segment(ABC):
         self.__segment = segment
 
     @property
-    def name(self) -> Optional[MultiLanguagePropertyValue]:
-        return cast(Optional[MultiLanguagePropertyValue], self.__segment['Name'])
+    def name(self) -> Optional[RawMLPropertyValue]:
+        return cast(Optional[RawMLPropertyValue], self.__segment['Name'])
 
     @property
-    def description(self) -> Optional[MultiLanguagePropertyValue]:
-        return cast(Optional[MultiLanguagePropertyValue], self.__segment['Description'])
+    def description(self) -> Optional[RawMLPropertyValue]:
+        return cast(Optional[RawMLPropertyValue], self.__segment['Description'])
 
     @property
     def record_count(self) -> Optional[int]:
@@ -259,15 +261,17 @@ class Segments:
     """
     이름(id_short) → `Segment` 매핑. dict-like (Mapping 인터페이스).
 
-    각 segment는 `DefaultElementReference`의 `semantic_id`를 보고 적절한
+    각 segment는 `BaseElementReference`의 `semantic_id`를 보고 적절한
     `Segment` 서브클래스로 인스턴스화된다.
     """
 
-    def __init__(self, segs_dict: Mapping[str, DefaultElementReference]) -> None:
-        def to_segment(seg_ref: DefaultElementReference) -> Segment:
+    def __init__(self, segs_dict: Mapping[str, BaseElementReference]) -> None:
+        def to_segment(seg_id: str, seg_ref: BaseElementReference) -> Segment:
             assert (semantic_id := seg_ref.semantic_id) is not None
-            values = cast(CollectionValueType, seg_ref.read_value())
-            match semantic_id.key[0].value:
+            # semantic_id 는 model.Reference 이므로 key 의 URI 문자열을 꺼내 비교한다.
+            semantic_uri = semantic_id.key[0].value
+            values = cast(CollectionValueType, seg_ref.read_value().to_raw_object())
+            match semantic_uri:
                 case TIMESERIES_SEMANTIC_ID.INTERNAL_SEGMENT:
                     return InternalSegment(values)
                 case TIMESERIES_SEMANTIC_ID.LINKED_SEGMENT:
@@ -275,12 +279,10 @@ class Segments:
                 case TIMESERIES_SEMANTIC_ID.EXTERNAL_SEGMENT:
                     return ExternalSegment(values)
                 case _:
-                    raise ValueError(f"Unknown segment type: {seg_ref.id_short}")
+                    raise ValueError(f"Unknown segment type: {seg_id}")
 
-        self.__segments = {
-            str(seg_ref.id_short): to_segment(seg_ref)
-            for seg_name, seg_ref in segs_dict.items()
-        }
+        self.__segments = { seg_id: to_segment(seg_id, seg_ref)
+                           for seg_id, seg_ref in segs_dict.items() }
 
     def __len__(self) -> int:
         return len(self.__segments)
@@ -352,20 +354,72 @@ class TimeSeriesService(SubmodelService):
         Returns:
             TimeSeries: Metadata + Segments 묶음.
         """
-        metadata_value = self.element_reference('Metadata').read_value()
+        meta_value = self.element_reference('Metadata').read_value()
+        metadata_value = meta_value.to_raw_object()
         metadata = Metadata(cast(CollectionValueType, metadata_value))
 
-        segs_ref = cast(DefaultElementReference, self.element_reference('Segments'))
+        segs_ref = self.element_reference('Segments')
         # 직속 segment 경로(`Segments.<name>`, 깊이 2)만 골라낸다.
         path_pairs = {
             path2[1]: '.'.join(path2)
             for path2 in (path.split('.') for path in segs_ref.pathes())
             if len(path2) == 2
         }
-        segs_dict: dict[str, DefaultElementReference] = {
-            seg_name: cast(DefaultElementReference, self.element_reference(seg_ref_str))
+        segs_dict: dict[str, ElementReference] = {
+            seg_name: self.element_reference(seg_ref_str)
             for seg_name, seg_ref_str in path_pairs.items()
         }
 
         segments = Segments(segs_dict)
         return TimeSeries(metadata, segments)
+
+    def read_records_since(self, since: str|datetime, count:int) -> tuple[ElementCollectionValue, ElementCollectionValue]:
+        from .utils import datetime_to_iso8601
+
+        since = datetime_to_iso8601(since) if isinstance(since, datetime) else since
+        range_expr = f'{since}+{count}'
+        return self.read_records_by_range(range_expr)
+
+    def read_records_last(self, *,
+                          count:Optional[int],
+                          seconds:Optional[float],
+                          period:Optional[str|timedelta],
+                          anchor:str='latest') -> tuple[ElementCollectionValue, ElementCollectionValue]:
+        from .utils import second_to_iso8601, timedelta_to_iso8601
+
+        if count is not None:
+            return self.read_records_by_range(f'last={count}')
+
+        if anchor not in ('latest', 'now'):
+            raise ValueError(f"Invalid anchor value: {anchor}. Must be 'latest' or 'now'.")
+        
+        if seconds is not None:
+            range_expr = f'last={second_to_iso8601(seconds)}@{anchor}'
+            return self.read_records_by_range(range_expr)
+        elif period is not None:
+            if isinstance(period, timedelta   ):
+                period = timedelta_to_iso8601(period)
+            range_expr = f'last={period}@{anchor}'
+            return self.read_records_by_range(range_expr)
+        else:
+            raise ValueError("Either count, seconds, or period must be provided.")
+
+    def read_records_by_period(self, start: str, end: str) -> tuple[ElementCollectionValue, ElementCollectionValue]:
+        range_expr = f'{start}~{end}'
+        return self.read_records_by_range(range_expr)
+    
+    def read_records_by_range(self, ts_range: str) -> tuple[ElementCollectionValue, ElementCollectionValue]:
+        from mdtpy import AASOperationService
+
+        read_records_by_range = AASOperationService(self, "ReadRecordsByRange")
+        outputs = read_records_by_range.invoke(Range=ts_range)
+        return outputs['Records'], outputs['RecordMetadata']  # type: ignore
+
+
+__all__ = [
+    "TIMESERIES_SEMANTIC_ID",
+    "TimeSeries", "TimeSeriesService",
+    "Metadata",
+    "Record", "Records",
+    "Segment", "InternalSegment", "LinkedSegment", "ExternalSegment", "Segments",
+]

@@ -10,7 +10,7 @@ from urllib import parse
 
 from basyx.aas import model
 
-from .reference import ElementReference, DefaultElementReference
+from .ref import ElementReference, BaseElementReference
 from .descriptor import MDTSubmodelDescriptor
 from .aas_misc import (
     ProtocolInformation,
@@ -191,11 +191,8 @@ class SubmodelService:
         Returns:
             ElementReference: idShort 경로에 해당하는 SubmodelElement의 ElementReference.
         """
-        ref_string = f'{self.instance_id}:{self.id_short}:{path}'
-        return DefaultElementReference(
-            ref_string=ref_string,
-            endpoint=self.submodel_element_url(path),
-        )
+        ref_string = f"{self.instance_id}:{self.id_short}:{path}"
+        return BaseElementReference(ref_string)
 
     def invoke_operation_sync(
         self,
@@ -442,12 +439,9 @@ class SubmodelElementCollection(Mapping[str, model.SubmodelElement]):
         # mutation(__setitem__/__delitem__) 발생 시 None으로 리셋한다.
         self.__pathes_cache: Optional[list[str]] = None
 
-    def element_reference(self, path: str) -> DefaultElementReference:
+    def element_reference(self, path: str) -> BaseElementReference:
         ref_string = f'{self.__submodel_svc.instance_id}:{self.__submodel_svc.id_short}:{path}'
-        return DefaultElementReference(
-            ref_string=ref_string,
-            endpoint=self.__submodel_svc.submodel_element_url(path),
-        )
+        return BaseElementReference(ref_string)
 
     def refresh(self) -> None:
         """경로 캐시를 무효화하여 다음 조회 시 서버에서 재페치하게 한다."""

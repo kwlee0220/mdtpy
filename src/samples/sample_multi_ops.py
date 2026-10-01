@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 
 import mdtpy
+from mdtpy.ref import reference
 
 test_images = ['Innercase01-1.jpg', 'Innercase01-2.jpg', 'Innercase01-3.jpg', 'Innercase01-4.jpg', 'Innercase01-5.jpg',
               'Innercase05-1.jpg', 'Innercase05-2.jpg','Innercase05-3.jpg','Innercase05-4.jpg', 'Innercase05-5.jpg',
@@ -21,7 +22,7 @@ simulate = inspector.operations['ProcessSimulation']
 upper_image = inspector.parameters['UpperImage']
 defect_list = inspector.parameters['DefectList']
 cycle_time = inspector.parameters['CycleTime']
-defect = inspection.output_arguments['Defect']
+defect = reference(inspection.output_arg_desc_dict['Defect'].reference)
 
 
 def inspect(image_file_path: str):
@@ -30,7 +31,7 @@ def inspect(image_file_path: str):
     upper_image.put_attachment(image_file_path)
 
     started = datetime.now()
-    inspection.invoke(UpperImage=upper_image, Defect=defect)
+    inspection.invoke(UpperImage=upper_image)
     update.invoke(DefectList=defect_list, Defect=defect, UpdatedDefectList=defect_list)
     simulate.invoke(DefectList=defect_list, AverageCycleTime=cycle_time)
     elapsed = datetime.now() - started

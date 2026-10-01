@@ -25,7 +25,7 @@ from mdtpy.descriptor import (
     SEMANTIC_ID_TIME_SERIES_SUBMODEL,
     MDTSubmodelDescriptor,
 )
-from mdtpy.reference import DefaultElementReference
+from mdtpy.ref import BaseElementReference
 from mdtpy.timeseries import (
     InternalSegment,
     LinkedSegment,
@@ -63,11 +63,12 @@ def make_segment_dict(**overrides):
 
 def make_seg_ref(semantic_id_uri: str, value: dict, id_short: str = "Seg"):
     """semantic_id에 따라 분기되는 to_segment를 통과시키기 위한 mock reference."""
-    ref = MagicMock(spec=DefaultElementReference)
+    ref = MagicMock(spec=BaseElementReference)
     sem_id = MagicMock()
     sem_id.key = [MagicMock(value=semantic_id_uri)]
     ref.semantic_id = sem_id
-    ref.read_value.return_value = value
+    # read_value() 는 ElementValue 를 반환하며, 코드는 그 위에서 to_raw_object() 를 호출한다.
+    ref.read_value.return_value.to_raw_object.return_value = value
     ref.id_short = id_short
     return ref
 
@@ -279,16 +280,16 @@ class TestSegments:
         assert list(coll.values()) == [coll['S']]
         assert list(iter(coll)) == [coll['S']]
 
-    def test_keyed_by_id_short(self):
-        """입력 dict 키와 무관하게 segment의 id_short가 키로 쓰인다 (회귀 가드)."""
+    def test_keyed_by_dict_key(self):
+        """입력 dict 의 키가 그대로 Segments 의 키로 쓰인다 (회귀 가드)."""
         ref = make_seg_ref(
             TIMESERIES_SEMANTIC_ID.INTERNAL_SEGMENT,
             make_segment_dict(Records={}),
             id_short='RealName',
         )
-        coll = Segments({'IgnoredKey': ref})
-        assert 'RealName' in coll
-        assert 'IgnoredKey' not in coll
+        coll = Segments({'SegKey': ref})
+        assert 'SegKey' in coll
+        assert 'RealName' not in coll
 
 
 # --------------------------------------------------------------------------- #
@@ -329,9 +330,9 @@ class TestTimeSeriesService:
     def test_timeseries_assembles_metadata_and_segments(self):
         svc = TimeSeriesService('inst-1', self._make_sm_desc())
 
-        # element_reference('Metadata').read_value() → Metadata dict
+        # element_reference('Metadata').read_value() → Metadata (ElementValue, to_raw_object() → dict)
         meta_ref = MagicMock()
-        meta_ref.read_value.return_value = {
+        meta_ref.read_value.return_value.to_raw_object.return_value = {
             'Name': {'en': 'My TS'},
             'Description': None,
             'Record': {'Timestamp': None, 'V': 0},
@@ -370,7 +371,7 @@ class TestTimeSeriesService:
         svc = TimeSeriesService('inst-1', self._make_sm_desc())
 
         meta_ref = MagicMock()
-        meta_ref.read_value.return_value = {
+        meta_ref.read_value.return_value.to_raw_object.return_value = {
             'Name': {'en': 'X'},
             'Description': None,
             'Record': {'Timestamp': None, 'V': 0},

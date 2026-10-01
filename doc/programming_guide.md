@@ -15,7 +15,8 @@ manager = mdtpy.connect("http://localhost:12985/instance-manager")
 
 `manager`는 `MDTInstanceManager` 객체로, 이후 모든 인스턴스 접근의 시작점이다.
 `mdtpy.connect()`는 모듈-수준 전역(`mdtpy.instance.mdt_manager`)도 함께 설정하므로,
-`LazyElementReference` 같은 지연 해석 객체가 동일 매니저를 참조할 수 있다.
+`mdtpy.reference()`로 만든 `BaseElementReference`가 실제 접근 시점에 이 전역 매니저를
+통해 지연 해석될 수 있다.
 
 ## 2. 인스턴스 접근 및 제어
 
@@ -122,24 +123,36 @@ print(status.model_type)   # SubmodelElement 타입 (예: Property)
 print(status.value_type)   # 값 타입 (예: xs:string)
 
 # 값 읽기
-v = status.read_value()    # -> Python 값 (str, int, float 등)
-print(v)                   # 'IDLE'
+v = status.read_value()    # -> PropertyValue 객체
+print(v.value)             # 'IDLE'  (실제 스칼라 값은 .value 로 접근)
 
-# 값 쓰기
-status.update_value('Running')
+# 값 쓰기 — update_value() 는 ElementValue 를 받는다 (원시 스칼라는 mdt_value 로 감싼다)
+status.update_value(mdtpy.mdt_value('Running'))
+
+# 원시 Python 값을 그대로 쓰려면 update_with_raw_value() 를 사용한다
+status.update_with_raw_value('Running')
 ```
+
+> **참고:** `read_value()` 는 SubmodelElement 종류에 따라 `ElementValue` 의 하위 클래스
+> 객체를 반환한다 (`PropertyValue` / `ElementCollectionValue` / `ElementListValue` /
+> `FileValue` / `RangeValue` / `MLPropertyValue`). 스칼라/딕셔너리/리스트 등 원시 표현이
+> 필요하면 각 객체의 `.value` (또는 `.to_raw_object()`) 를 사용한다.
+> `update_value()` 는 `ElementValue` 를 받는다 (원시 스칼라는 `mdtpy.mdt_value(...)` 로
+> 감싼다). 원시 Python 값을 그대로 쓰려면 `update_with_raw_value()` 를 사용한다.
 
 ### 복합 값 (SubmodelElementCollection)
 
-Collection 타입 파라미터의 값은 `dict`로 반환된다.
+Collection 타입 파라미터의 값은 `ElementCollectionValue`(읽기 전용 `Mapping`)로 반환된다.
+각 멤버는 다시 `ElementValue` 객체이며, 멤버 인덱싱(`v['Key']`)을 지원한다.
 
 ```python
 production = parameters['NozzleProduction']
 v = production.read_value()
-# v = {'QuantityProduced': 100, 'QuantityDefect': 2, ...}
+# v['QuantityProduced'] -> PropertyValue(100)
 
-v['QuantityProduced'] = v['QuantityProduced'] + 10
-production.update_value(v)
+qty = v['QuantityProduced'].value          # 100
+# 변경할 멤버만 원시 dict 로 전달하면 부분 갱신된다 (update_with_raw_value).
+production.update_with_raw_value({'QuantityProduced': qty + 10})
 ```
 
 ### 파일 첨부 (File 타입 파라미터)
@@ -161,54 +174,55 @@ param.delete_attachment()
 
 ## 4. Reference 해석
 
-MDT 플랫폼의 참조 문자열(reference string)을 통해 SubmodelElement에 직접 접근할 수 있다.
-`resolve_reference()`는 다음 형식을 지원한다:
+MDT 플랫폼의 참조 문자열(reference string)로 SubmodelElement에 접근할 수 있다.
+`mdtpy.reference(ref_string)` 는 참조 문자열을 `BaseElementReference` 로 감싸 반환한다.
+참조 생성 시점에는 서버 호출이 없으며, 실제 읽기/쓰기 시점에 전역 `mdt_manager` 를
+통해 **서버가** 참조를 해석한다.
+
+지원하는 참조 형식:
 
 | 형식 | 의미 |
 |---|---|
-| `param:<instance>:<parameter>` | 파라미터 직접 참조 (서버 호출 없음, 로컬 lookup) |
-| `oparg:<instance>:<operation>:in\|out:<argument>` | Operation 인자 참조 (로컬 lookup) |
-| 그 외 | 서버 `/references/$url`에 위임하여 엔드포인트 조회 |
+| `<instance>:<submodel>:<elementPath>` | SubmodelElement 직접 참조 |
+| `param:<instance>:<parameter>` | 파라미터 참조 |
+| `oparg:<instance>:<operation>:in\|out:<argument>` | Operation 인자 참조 |
+| `timeseries:<instance>:<submodel>[#<range>][\|<cols>]` | 시계열 참조 |
 
 ```python
-# 일반 경로 (서버에 위임)
-ref = manager.resolve_reference('test:Data:DataInfo.Equipment.EquipmentParameterValues[0].ParameterValue')
+from mdtpy import reference
 
-# 파라미터 참조 (로컬 매핑)
-ref = manager.resolve_reference('param:test:SleepTime')
-
-# Operation 인자 참조 (로컬 매핑)
-in_arg = manager.resolve_reference('oparg:test:AddAndSleep:in:IncAmount')
-out_arg = manager.resolve_reference('oparg:test:AddAndSleep:out:Output')
+ref = reference('test:Data:DataInfo.Equipment.EquipmentParameterValues[0].ParameterValue')
+param_ref = reference('param:test:SleepTime')
+in_arg = reference('oparg:test:AddAndSleep:in:IncAmount')
+out_arg = reference('oparg:test:AddAndSleep:out:Output')
 ```
 
 형식 위반 시 `ValueError`, 존재하지 않는 인스턴스/파라미터/오퍼레이션이면 `ResourceNotFoundError`,
-서버 측 오류면 `MDTException`이 발생한다.
+서버 측 오류면 `MDTException`이 발생한다 (모두 실제 접근 시점에).
 
-반환되는 `DefaultElementReference` 계열 객체는 다음 속성/메서드를 제공한다:
+`BaseElementReference` 는 다음 속성/메서드를 제공한다:
 
 ```python
 ref.ref_string     # 참조 문자열
 ref.model_type     # SubmodelElement 타입 (type 객체)
-ref.id_short       # ID Short
-ref.value_type     # 값 타입 (Property인 경우)
+ref.value_type     # 값 타입 (Property인 경우 xs:*, 그 외 타입명)
+ref.semantic_id    # semanticId (Optional[model.Reference])
 
-ref.read()         # -> model.SubmodelElement (전체 AAS 객체)
-ref.read_value()   # -> Python 값
-ref.update_value(new_value)
+ref.read()                                    # -> model.SubmodelElement (전체 AAS 객체)
+ref.read_value()                              # -> ElementValue 객체 (.value 로 원시 값 접근)
+ref.update_value(mdtpy.mdt_value(new_value))  # update_value() 는 ElementValue 를 받는다
+ref.update_with_raw_value(new_value)          # 원시 Python 값을 그대로 쓴다
 
-# File 타입인 경우
+# File 타입인 경우 (대상 인스턴스가 실행 중이어야 한다)
 ref.put_attachment(file_path, content_type)
 ref.get_attachment()  # -> Optional[bytes]
 ref.delete_attachment()
 ```
 
-`LazyElementReference`는 전역 `mdt_manager`를 통해 지연 해석되는 참조이다:
-
-```python
-from mdtpy import reference
-lazy_ref = reference('param:inspector:UpperImage')  # 실제 접근 시점에 해석
-```
+> `reference()` 로 만든 참조는 서버 접속 없이 생성할 수 있고, 실제 접근 시점에 전역
+> `mdt_manager`(= `mdtpy.connect()` 가 설정)를 통해 지연 해석된다. 값 연산은 매니저를
+> 경유하며, `add`/`remove`/첨부 연산만 해석된 `service_url` 로 FA³ST 인스턴스에 직접
+> 접근한다 (대상 인스턴스 미실행 시 `service_url` 이 `None` 이라 `RuntimeError`).
 
 ## 5. Submodel 서비스
 
@@ -225,8 +239,9 @@ sme = svc.submodel_elements['DataInfo.Equipment.EquipmentParameters[0].Parameter
 print(sme.id_short, sme.value)
 
 # 값 읽기/쓰기
-svc.submodel_elements.get_value('path.to.element')
-svc.submodel_elements.update_value('path.to.element', new_value)
+svc.submodel_elements.get_value('path.to.element')                # -> ElementValue
+svc.submodel_elements.update_value('path.to.element', new_value)  # new_value 는 ElementValue
+# 원시 값을 그대로 쓰려면: svc.element_reference('path.to.element').update_with_raw_value(raw)
 
 # ElementReference 획득
 ref = svc.element_reference('path.to.element')
@@ -273,8 +288,9 @@ svc.is_time_series()         # 시계열 모델
 
 Operation은 AI, 시뮬레이션 등의 연산을 원격 실행하는 기능이다.
 
-`ArgumentList`(input/output)는 동일한 ID가 중복으로 정의되면 생성 시점에
-`MDTException("Duplicate Argument id: ...")`을 발생시킨다.
+`input_arguments` / `output_arguments`는 `dict[str, Argument]`로 구성되며, 동일한
+ID가 중복으로 정의되면 구성 시점에 `MDTException("Duplicate Argument id: ...")`을
+발생시킨다.
 
 ### 기본 호출
 
@@ -285,7 +301,7 @@ op = instance.operations['AddAndSleep']
 # - 값을 직접 전달하거나
 # - MDTParameter/Argument 등 ElementReference 객체를 전달할 수 있다
 result = op.invoke(IncAmount=20)
-# result: dict[str, ElementValueType] (예: {'Output': 42})
+# result: dict[str, ElementValue] (예: {'Output': 42})
 print(result)
 ```
 
@@ -310,16 +326,16 @@ sleep_time = op.input_arguments['SleepTime']
 
 # Output=data: invoke 후 data.update_value(result['Output'])이 자동 실행
 result = op.invoke(Data=data, IncAmount=7, SleepTime=sleep_time, Output=data)
-op.output_arguments.update_value(result)  # 모든 출력 인자를 한번에 업데이트
 ```
 
-### 인자 인덱스 접근
+### 인자 접근
 
-`ArgumentList`는 ID(str) 또는 위치(int) 둘 다로 인자에 접근할 수 있다.
+`input_arguments` / `output_arguments`는 `dict[str, Argument]`이다. ID(str)로 개별
+인자에 접근한다.
 
 ```python
-op.input_arguments['IncAmount']   # ID로
-op.input_arguments[0]             # 정의 순서대로
+op.input_arguments['IncAmount']   # ID로 Argument 획득
+op.output_arguments['Output'].update_value(result['Output'])  # 개별 인자 값 갱신
 ```
 
 ### 복합 워크플로우 예제
@@ -539,15 +555,17 @@ mdtpy에서 지원하는 AAS SubmodelElement 값 타입:
 | SubmodelElement 타입 | Python 값 타입 | 비고 |
 |---|---|---|
 | Property | `str`, `int`, `float`, `bool`, `datetime` 등 | `value_type`에 따라 결정 |
-| SubmodelElementCollection | `dict[str, ElementValueType]` | 중첩 가능 |
-| SubmodelElementList | `list[ElementValueType]` | 인덱스 접근: `path[0]` |
+| SubmodelElementCollection | `dict[str, ElementValue]` | 중첩 가능 |
+| SubmodelElementList | `list[ElementValue]` | 인덱스 접근: `path[0]` |
 | File | `FileValue` (`{content_type, value}`) | 첨부파일은 별도 API |
 | Range | `RangeValue` (`{min, max}`) | |
 | MultiLanguageProperty | `dict[str, str]` | `{'ko': '값', 'en': 'value'}` |
 
-서버 wire 포맷(camelCase)은 `FileJsonValue`(`{contentType, value}`),
+bare wire 포맷(camelCase, `@type` 없음)은 `FileJsonValue`(`{contentType, value}`),
 `MultiLanguagePropertyJsonValue`(`list[dict[str, str]]`)으로 별도 정의되어 있으며,
-`from_json_object()` / `to_json_object()` 함수가 두 표현 사이를 변환한다.
+`ElementValue.to_raw_json_node()` / `from_raw_json_node()`(`value/factory.py`) 가
+`ElementValue` ↔ bare wire 를 변환한다. 다만 매니저 값 경로와 RPC 는 polymorphic
+`@type` 형식(`to_json_node()` / `parse_json_node()`) 을 사용한다.
 
 ## 13. HTTP 호출 정책
 
@@ -579,12 +597,11 @@ if not instance.is_running():
 # 3. 파라미터 읽기/쓰기
 param = instance.parameters['MyParam']
 value = param.read_value()
-param.update_value(new_value)
+param.update_value(mdtpy.mdt_value(new_value))   # 또는 param.update_with_raw_value(new_value)
 
-# 4. Operation 호출
+# 4. Operation 호출 (출력 인자는 invoke가 자동으로 반영한다)
 op = instance.operations['MyOperation']
 result = op.invoke(Input1=param, Input2=42)
-op.output_arguments.update_value(result)
 
 # 5. 시계열 데이터 분석
 ts = instance.timeseries['MyTimeSeries'].timeseries()

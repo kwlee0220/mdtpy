@@ -1,4 +1,4 @@
-__version__ = "0.2.5"
+__version__ = "0.2.12"
 
 # SSL 인증서 검증 경고 억제
 import urllib3
@@ -9,9 +9,9 @@ from .value import *
 from .descriptor import *
 from .exceptions import *
 from .timeseries import *
-from .reference import *
+from .ref import *
 from .operation import *
 from . import aas_misc as aas
 from . import basyx
+from .timeseries import *
 from .utils import *
-#from . import airflow

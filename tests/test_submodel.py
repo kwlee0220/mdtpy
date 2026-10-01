@@ -24,6 +24,7 @@ import pytest
 
 from basyx.aas import model
 
+import mdtpy.instance as instance_mod
 from mdtpy.aas_misc import (
     Endpoint,
     OperationHandle,
@@ -40,7 +41,7 @@ from mdtpy.descriptor import (
     SEMANTIC_ID_TIME_SERIES_SUBMODEL,
 )
 from mdtpy.exceptions import InvalidResourceStateError, ResourceNotFoundError
-from mdtpy.reference import DefaultElementReference, ElementReference
+from mdtpy.ref import BaseElementReference, ElementReference
 from mdtpy.submodel import (
     SubmodelElementCollection,
     SubmodelService,
@@ -239,9 +240,14 @@ class TestSubmodelServiceReferences:
             "inst-1", make_sm_desc(id_short="Data", endpoint="http://srv/sm")
         )
         ref = svc.element_reference("Path.x")
-        assert isinstance(ref, DefaultElementReference)
+        assert isinstance(ref, BaseElementReference)
         assert ref.ref_string == "inst-1:Data:Path.x"
-        assert ref.endpoint == "http://srv/sm/submodel-elements/Path.x"
+        # service_url 은 전역 mdt_manager 에 ref_string 을 질의하여 얻는다.
+        mgr = MagicMock()
+        mgr.get_reference_service_url.return_value = "http://srv/sm/submodel-elements/Path.x"
+        instance_mod.mdt_manager = mgr  # conftest 가 테스트 후 원복한다.
+        assert ref.service_url == "http://srv/sm/submodel-elements/Path.x"
+        mgr.get_reference_service_url.assert_called_once_with("inst-1:Data:Path.x")
 
     def test_submodel_elements_property_returns_collection(self):
         svc = SubmodelService("i", make_sm_desc(endpoint="http://srv/sm"))
@@ -272,7 +278,7 @@ class TestSubmodelServiceCollection:
                                 semantic_id=SEMANTIC_ID_SIMULATION_SUBMODEL),
         }
         # AASOperationService 생성자는 HTTP를 일으키므로 mock 처리
-        with patch("mdtpy.operation.AASOperationService"):
+        with patch("mdtpy.operation.mdt_operation.AASOperationService"):
             coll = SubmodelServiceCollection(
                 make_instance_mock(op_desc_dict=op_dict), sm_descs,
             )
@@ -373,7 +379,12 @@ class TestSubmodelElementCollection:
         coll, _ = self._make_coll()
         ref = coll.element_reference("foo.bar")
         assert ref.ref_string == "inst-1:Data:foo.bar"
-        assert ref.endpoint == "http://srv/sm/submodel-elements/foo.bar"
+        # service_url 은 전역 mdt_manager 에 ref_string 을 질의하여 얻는다.
+        mgr = MagicMock()
+        mgr.get_reference_service_url.return_value = "http://srv/sm/submodel-elements/foo.bar"
+        instance_mod.mdt_manager = mgr  # conftest 가 테스트 후 원복한다.
+        assert ref.service_url == "http://srv/sm/submodel-elements/foo.bar"
+        mgr.get_reference_service_url.assert_called_once_with("inst-1:Data:foo.bar")
 
     # __iter__/__len__/__contains__ + cache ------------------------------- #
 

@@ -1,37 +1,44 @@
 
 import mdtpy
+from mdtpy import PropertyValue, ElementCollectionValue, FileValue, mdt_value
+from mdtpy.ref import reference
 
 manager = mdtpy.connect("http://localhost:12985/instance-manager")
 instance = manager.instances['test']
 
-ref = manager.resolve_reference('test:Data:DataInfo.Equipment.EquipmentParameterValues[0].ParameterValue')
-print(ref.ref_string)
-print(ref.model_type)
-print(ref.id_short)
+# Default ElementReference
+ref = reference('test:Data:DataInfo.Equipment.EquipmentParameterValues[0].ParameterValue')
+print(f"type={type(ref)}, ref_string={ref.ref_string}, model_type={ref.model_type}")
+print(f"element={ref.read()}")
+smev = ref.read_value()
+print(f"value={smev}")
+assert isinstance(smev, PropertyValue)
+print(smev.value)
+v = mdt_value(int(smev.to_raw_object()) + 21)
+ref.update_value(v)
 
-print(ref.read())
+# Parameter Reference
+ref = reference('param:Welder:NozzleProduction')
+print(f"type={type(ref)}, ref_string={ref.ref_string}, model_type={ref.model_type}")
+print(f"element={ref.read()}")
 v = ref.read_value()
-assert isinstance(v, int)
-print(v)
-ref.update_value(21)
+print(f"value={v}")
+assert isinstance(v, ElementCollectionValue)
 
-ref = manager.resolve_reference('param:test:SleepTime')
-print(ref.ref_string)
-print(ref.model_type)
-print(ref.id_short)
-print(ref.value_type)
-print(ref.read())
-v = ref.read_value()
-assert isinstance(v, float)
-print(v)
-ref.update_value(v + 1.1)
-
-ref = manager.resolve_reference('param:inspector:UpperImage')
-ref.put_attachment('/home/kwlee/tmp/Innercase05-3.jpg', 'image/jpg')
-
+# 'File' type reference
+ref = reference('param:inspector:UpperImage')
+print(f"type={type(ref)}, ref_string={ref.ref_string}, model_type={ref.model_type}")
+ref.put_attachment('/home/kwlee/tmp/Innercase05-2.jpg', 'image/jpg')
 print(ref.model_type)
 print(ref.read())
 print(ref.read_value())
 x = ref.get_attachment()
-
 ref.delete_attachment()
+
+# Operation Argument Reference
+ref = reference('oparg:inspector:ThicknessInspection:in:UpperImage')
+print(f"type={type(ref)}, ref_string={ref.ref_string}, model_type={ref.model_type}")
+print(f"element={ref.read()}")
+smev = ref.read_value()
+print(f"value={smev}")
+assert isinstance(smev, FileValue)

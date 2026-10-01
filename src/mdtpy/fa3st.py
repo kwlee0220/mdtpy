@@ -228,6 +228,60 @@ def call_put(
     return _request("PUT", url, data=data, deserializer=deserializer)
 
 
+def call_get_file(
+    url: str,
+    timeout: float = DEFAULT_TIMEOUT,
+) -> Optional[tuple[str, bytes]]:
+    """
+    바이너리/파일 응답을 받는 GET 요청을 보낸다. 첨부파일 다운로드에 사용한다.
+
+    `call_get`(텍스트 본문)과 달리 응답을 `(Content-Type, bytes)` 튜플로 반환한다.
+    `verify`는 모듈 상수(`VERIFY_TLS`)로 적용된다.
+
+    Args:
+        url (str): 요청할 URL.
+        timeout (float): 요청 타임아웃(초).
+    Returns:
+        Optional[tuple[str, bytes]]: (Content-Type, 본문 바이트), 또는 None(204).
+    Raises:
+        MDTInstanceConnectionError: 연결 실패 시.
+        MDTException: 비-2xx 응답에서 발생하는 서버 측 오류.
+    """
+    try:
+        resp = requests.get(url, verify=VERIFY_TLS, timeout=timeout)
+    except requests.exceptions.ConnectionError as e:
+        raise MDTInstanceConnectionError(f"Failed to connect to {url}", e)
+    return read_file_response(resp)
+
+
+def call_put_file(
+    url: str,
+    files: dict,
+    data: Optional[dict[str, str]] = None,
+    timeout: float = 60.0,
+) -> None:
+    """
+    multipart/form-data 형식의 PUT 요청을 보낸다. 첨부파일 업로드에 사용한다.
+
+    `call_put`(문자열 본문)과 달리 `files`/폼필드 `data`를 함께 전송한다.
+    `verify`는 모듈 상수(`VERIFY_TLS`)로 적용되며, 응답 본문은 사용하지 않는다.
+
+    Args:
+        url (str): 요청할 URL.
+        files (dict): `requests`의 multipart 업로드용 `files` 딕셔너리.
+        data (Optional[dict[str, str]]): 함께 보낼 폼필드.
+        timeout (float): 요청 타임아웃(초). 업로드 특성상 기본값을 크게 둔다.
+    Raises:
+        MDTInstanceConnectionError: 연결 실패 시.
+        MDTException: 비-2xx 응답에서 발생하는 서버 측 오류.
+    """
+    try:
+        resp = requests.put(url, files=files, data=data, verify=VERIFY_TLS, timeout=timeout)
+    except requests.exceptions.ConnectionError as e:
+        raise MDTInstanceConnectionError(f"Failed to connect to {url}", e)
+    read_none_response(resp)
+
+
 def call_post(
     url: str,
     data: str,

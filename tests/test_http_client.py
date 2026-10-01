@@ -81,9 +81,10 @@ class TestParseNoneResponse:
 # --------------------------------------------------------------------------- #
 
 class TestParseResponse:
-    def test_returns_raw_json_when_result_cls_is_none(self):
-        resp = make_response(json_data={"a": 1})
-        assert parse_response(resp) == {"a": 1}
+    def test_returns_raw_text_when_result_cls_is_none(self):
+        # result_cls가 없으면 JSON 본문을 파싱하지 않고 원시 텍스트를 그대로 반환한다.
+        resp = make_response(json_data={"a": 1}, text='{"a": 1}')
+        assert parse_response(resp) == '{"a": 1}'
 
     def test_uses_result_cls_from_dict(self):
         resp = make_response(json_data={"name": "x", "value": 42})

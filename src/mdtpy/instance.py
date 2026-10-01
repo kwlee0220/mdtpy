@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import tempfile
 import time
-from typing import Iterator, Generator, Optional
+from typing import Any, Iterator, Generator, Optional
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -12,10 +13,13 @@ import requests
 from urllib.parse import quote
 
 from basyx.aas import model
+
+from .value import ElementValue
+from . import value as smev
 from .basyx import serde as basyx_serde
 
 from .submodel import SubmodelService, SubmodelServiceCollection
-from .reference import DefaultElementReference
+from .ref import ElementReference, BaseElementReference
 from .descriptor import (
     InstanceDescriptor,
     MDTParameterDescriptor,
@@ -30,6 +34,7 @@ from .timeseries import TimeSeriesService
 from .operation import OperationSubmodelService
 from .http_client import parse_response, parse_list_response, parse_none_response
 from .exceptions import InvalidResourceStateError, ResourceNotFoundError
+from .utils import json_serializer
 
 
 mdt_inst_url: Optional[str] = None
@@ -53,6 +58,10 @@ def _post(url, **kw):
 def _delete(url, **kw):
     kw.setdefault('timeout', DEFAULT_TIMEOUT)
     return requests.delete(url, **kw)
+
+def _patch(url, **kw):
+    kw.setdefault('timeout', DEFAULT_TIMEOUT)
+    return requests.patch(url, **kw)
 
 def connect(url: str) -> MDTInstanceManager:
     """
@@ -94,19 +103,17 @@ class MDTInstanceManager:
         """
         return self.__instances
 
-    def resolve_reference(self, ref_string: str) -> DefaultElementReference:
+    def get_reference_service_url(self, ref_string: str) -> str:
         """
-        주어진 참조 문자열을 해석하여 해당하는 ElementReference 객체를 반환한다.
+        주어진 참조 문자열을 서버에 질의하여 대상 SubmodelElement 의 접근 URL 을 반환한다.
 
-        참조 문자열은 다음 형식 중 하나여야 한다.
-            - "param:<instance_id>:<parameter_id>"
-            - "oparg:<instance_id>:<operation_id>:in|out:<argument_id>"
-            - 그 외: 서버에 위임하여 엔드포인트를 조회한다.
+        참조 문자열의 형태와 관계없이 항상 MDTInstanceManager의 `/references/$url`
+        엔드포인트에 질의하여 서비스 URL 을 얻어 반환한다.
 
         Args:
             ref_string (str): 참조 문자열.
         Returns:
-            DefaultElementReference: 참조 문자열에 해당하는 ElementReference 객체.
+            str: 참조 문자열이 가리키는 SubmodelElement 의 접근 URL.
         Raises:
             ValueError: 참조 문자열의 형식이 유효하지 않은 경우.
             ResourceNotFoundError: 참조가 가리키는 MDTInstance, parameter,
@@ -114,32 +121,173 @@ class MDTInstanceManager:
             MDTException: 서버가 오류 응답을 반환한 경우 (RemoteError 등 하위 타입 포함).
             requests.exceptions.RequestException: HTTP 통신 자체에 실패한 경우.
         """
-        parts = ref_string.split(':')
-        if not parts or not parts[0]:
-            raise ValueError(f"Invalid reference: {ref_string}")
-        match parts[0]:
-            case 'param':
-                if len(parts) != 3:
-                    raise ValueError(f"Invalid parameter reference: {ref_string}")
-                return self.instances[parts[1]].parameters[parts[2]]
-            case 'oparg':
-                if len(parts) != 5:
-                    raise ValueError(f"Invalid operation argument reference: {ref_string}")
-                op = self.instances[parts[1]].operations[parts[2]]
-                match parts[3]:
-                    case 'in':
-                        return op.input_arguments[parts[4]]
-                    case 'out':
-                        return op.output_arguments[parts[4]]
-                    case _:
-                        raise ValueError(f"Invalid operation argument reference: {ref_string}")
-            case _:
-                url = f"{self.__inst_url}/references/$url?ref={quote(ref_string)}"
-                resp = _get(url)
-                return DefaultElementReference(
-                    ref_string=ref_string,
-                    endpoint=parse_response(resp),
-                )
+        url = f"{self.url}/references/$url?ref={quote(ref_string, safe='')}"
+        resp = _get(url)
+        return parse_response(resp)
+
+    def resolve_reference(self, ref_string: str) -> BaseElementReference:
+        """
+        주어진 참조 문자열을 서버에 질의하여 해당하는 ElementReference 객체를 반환한다.
+
+        Args:
+            ref_string (str): 참조 문자열.
+        Returns:
+            BaseElementReference: 참조 문자열에 해당하는 ElementReference 객체.
+        Raises:
+            ValueError: 참조 문자열의 형식이 유효하지 않은 경우.
+            ResourceNotFoundError: 참조가 가리키는 MDTInstance, parameter,
+                            operation, argument 등이 존재하지 않는 경우.
+            MDTException: 서버가 오류 응답을 반환한 경우 (RemoteError 등 하위 타입 포함).
+            requests.exceptions.RequestException: HTTP 통신 자체에 실패한 경우.
+        """
+        service_url = self.get_reference_service_url(ref_string)
+        return BaseElementReference(ref_string, service_url=service_url)
+    
+    def to_reference_json(self, ref_string: str) -> str:
+        """
+        주어진 참조 문자열을 서버에 질의하여 해당하는 ElementReference 객체를 JSON으로 반환한다.
+
+        Args:
+            ref_string (str): 참조 문자열.
+        Returns:
+            str: 참조 문자열에 해당하는 ElementReference 의 JSON 문자열 표현.
+        Raises:
+            ValueError: 참조 문자열의 형식이 유효하지 않은 경우.
+            ResourceNotFoundError: 참조가 가리키는 MDTInstance, parameter,
+                            operation, argument 등이 존재하지 않는 경우.
+            MDTException: 서버가 오류 응답을 반환한 경우 (RemoteError 등 하위 타입 포함).
+            requests.exceptions.RequestException: HTTP 통신 자체에 실패한 경우.
+        """
+        url = f"{self.url}/references/$json?ref={quote(ref_string, safe='')}"
+        resp = _get(url)
+        return parse_response(resp)
+    
+    def from_reference_json(self, json_str: str) -> BaseElementReference:
+        """
+        주어진 JSON 문자열을 서버에 질의하여 해당하는 ElementReference 객체를 반환한다.
+
+        Args:
+            json_str (str): 참조 JSON 문자열.
+        Returns:
+            BaseElementReference: 참조 JSON 문자열에 해당하는 BaseElementReference 객체.
+        Raises:
+            ValueError: 참조 JSON 문자열의 형식이 유효하지 않은 경우.
+            ResourceNotFoundError: 참조가 가리키는 MDTInstance, parameter,
+                            operation, argument 등이 존재하지 않는 경우.
+            MDTException: 서버가 오류 응답을 반환한 경우 (RemoteError 등 하위 타입 포함).
+            requests.exceptions.RequestException: HTTP 통신 자체에 실패한 경우.
+        """
+        url = f"{self.url}/references/$json"
+        resp = _post(url, data=json_str, headers={'Content-Type': 'application/json'})
+        json_str = parse_response(resp)
+        resp_dict:dict[str,Any] = json.loads(json_str)
+        ref_string = resp_dict.get('referenceString')
+        service_url = resp_dict.get('serviceUrl')
+        if ref_string is None or service_url is None:
+            raise ValueError(f"Invalid reference JSON: {json_str}")
+
+        return BaseElementReference(ref_string, service_url=service_url)
+    
+    def read_element_of_reference(self, ref_string: str) -> model.SubmodelElement:
+        """
+        주어진 참조 문자열이 가리키는 SubmodelElement 객체의 값을 반환한다.
+
+        Args:
+            ref_string (str): 참조 문자열.
+        Returns:
+            model.SubmodelElement: 참조 문자열이 가리키는 SubmodelElement 객체.
+        Raises:
+            ValueError: 참조 문자열의 형식이 유효하지 않은 경우.
+            ResourceNotFoundError: 참조가 가리키는 MDTInstance, parameter,
+                            operation, argument 등이 존재하지 않는 경우.
+            MDTException: 서버가 오류 응답을 반환한 경우 (RemoteError 등 하위 타입 포함).
+            requests.exceptions.RequestException: HTTP 통신 자체에 실패한 경우.
+        """
+        url = f"{self.url}/submodel-element?ref={quote(ref_string, safe='')}"
+        resp = _get(url)
+        json = parse_response(resp)
+        return basyx_serde.from_json(json)
+    
+    def write_element_of_reference(self, ref_string: str, element: model.SubmodelElement) -> None:
+        """
+        주어진 참조 문자열이 가리키는 SubmodelElement 객체의 값을 변경한다.
+
+        Args:
+            ref_string (str): 참조 문자열.
+            element (model.SubmodelElement): 변경할 SubmodelElement 객체.
+        Raises:
+            ValueError: 참조 문자열의 형식이 유효하지 않은 경우.
+            ResourceNotFoundError: 참조가 가리키는 MDTInstance, parameter,
+                            operation, argument 등이 존재하지 않는 경우.
+            MDTException: 서버가 오류 응답을 반환한 경우 (RemoteError 등 하위 타입 포함).
+            requests.exceptions.RequestException: HTTP 통신 자체에 실패한 경우.
+        """
+        url = f"{self.url}/submodel-element?ref={quote(ref_string, safe='')}"
+        json_str = basyx_serde.to_json(element)
+        resp = _put(url, data=json_str, headers={'Content-Type': 'application/json'})
+        parse_none_response(resp)
+
+    def read_value_of_reference(self, ref_string: str) -> ElementValue:
+        """
+        주어진 참조 문자열이 가리키는 SubmodelElement 객체의 값을 반환한다.
+
+        Args:
+            ref_string (str): 참조 문자열.
+        Returns:
+            ElementValue: 참조 문자열이 가리키는 SubmodelElement 객체의 값.
+        Raises:
+            ValueError: 참조 문자열의 형식이 유효하지 않은 경우.
+            ResourceNotFoundError: 참조가 가리키는 MDTInstance, parameter,
+                            operation, argument 등이 존재하지 않는 경우.
+            MDTException: 서버가 오류 응답을 반환한 경우 (RemoteError 등 하위 타입 포함).
+            requests.exceptions.RequestException: HTTP 통신 자체에 실패한 경우.
+        """
+        url = f"{self.url}/submodel-element/$value?ref={quote(ref_string, safe='')}"
+        resp = _get(url)
+        value_json_str = parse_response(resp)  # type: ignore
+        return smev.parse_json_string(value_json_str)
+    
+    def update_value_of_reference(self, ref_string: str, smev: ElementValue) -> None:
+        """
+        주어진 참조 문자열이 가리키는 SubmodelElement 객체의 값을 변경한다.
+
+        Args:
+            ref_string (str): 참조 문자열.
+            smev (ElementValue): 변경할 값.
+        Raises:
+            ValueError: 참조 문자열의 형식이 유효하지 않은 경우.
+            ResourceNotFoundError: 참조가 가리키는 MDTInstance, parameter,
+                            operation, argument 등이 존재하지 않는 경우.
+            MDTException: 서버가 오류 응답을 반환한 경우 (RemoteError 등 하위 타입 포함).
+            requests.exceptions.RequestException: HTTP 통신 자체에 실패한 경우.
+        """
+        url = f"{self.url}/submodel-element/$value?ref={quote(ref_string, safe='')}"
+        value_json_str = smev.to_json_string()
+        resp = _patch(url,
+                      data=value_json_str,
+                      headers={'Content-Type': 'application/json'})
+        parse_none_response(resp)
+
+    def update_raw_object_of_reference(self, ref_string: str, raw_object: Any) -> None:
+        """
+        주어진 참조 문자열이 가리키는 SubmodelElement 객체의 값을 변경한다.
+
+        Args:
+            ref_string (str): 참조 문자열.
+            raw_object (Any): 변경할 값의 원시 객체.
+        Raises:
+            ValueError: 참조 문자열의 형식이 유효하지 않은 경우.
+            ResourceNotFoundError: 참조가 가리키는 MDTInstance, parameter,
+                            operation, argument 등이 존재하지 않는 경우.
+            MDTException: 서버가 오류 응답을 반환한 경우 (RemoteError 등 하위 타입 포함).
+            requests.exceptions.RequestException: HTTP 통신 자체에 실패한 경우.
+        """
+        url = f"{self.url}/submodel-element/$raw?ref={quote(ref_string, safe='')}"
+        # raw_object 값에는 dateTime 필드가 datetime 객체로 담기므로, datetime→ISO 8601 을
+        # 처리하는 json_serializer 를 default 로 지정한다 (평범한 json.dumps 는 미지원).
+        value_json_str = json.dumps(raw_object, default=json_serializer)
+        resp = _patch(url, data=value_json_str, headers={'Content-Type': 'application/json'})
+        parse_none_response(resp)
 
 
 class MDTInstanceCollection:
@@ -404,6 +552,18 @@ class MDTInstance:
             bool: MDTInstance가 실행 중인지 여부.
         """
         return self.status == MDTInstanceStatus.RUNNING
+    
+    @property
+    def parameter_descriptors(self) -> dict[str, MDTParameterDescriptor]:
+        """
+        MDTInstance에 정의된 모든 Parameter 객체들의 등록정보 목록을 반환한다.
+
+        Returns:
+            dict[str, MDTParameterDescriptor]: Parameter 등록정보 목록
+        """
+        url = f"{self.__instance_url}/model/parameters"
+        resp = _get(url)
+        return { desc.id: desc for desc in parse_list_response(resp, MDTParameterDescriptor) }
 
     @property
     def parameters(self) -> MDTParameterCollection:
@@ -413,9 +573,6 @@ class MDTInstance:
         Returns:
             MDTParameterCollection: 파라미터 목록
         """
-        if not self.is_running():
-            raise InvalidResourceStateError.create("MDTInstance", f"id={self.id}", self.status)
-
         url = f"{self.__instance_url}/model/parameters"
         resp = _get(url)
         desc_list = parse_list_response(resp, MDTParameterDescriptor)
@@ -444,9 +601,6 @@ class MDTInstance:
         Returns:
             dict[str, MDTOperationDescriptor]: Operation 등록정보 목록
         """
-        if not self.is_running():
-            raise InvalidResourceStateError.create("MDTInstance", f"id={self.id}", self.status)
-
         url = f"{self.__instance_url}/model/operations"
         resp = _get(url)
         return { desc.id: desc for desc in parse_list_response(resp, MDTOperationDescriptor) }
@@ -469,6 +623,9 @@ class MDTInstance:
         Returns:
             SubmodelServiceCollection[OperationSubmodelService]: Operation Service 목록
         """
+        if not self.is_running():
+            raise InvalidResourceStateError.create("MDTInstance", f"id={self.id}", self.status)
+        
         op_sm_desc_dict = {
             id: sm_desc
             for id, sm_desc in self.submodel_descriptors.items()
