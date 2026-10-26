@@ -29,7 +29,11 @@ construction entry points live in `factory.py`** and are re-exported from
   `ElementCollectionValue` (read-only `Mapping`),
   `ElementListValue` (read-only `Sequence`, members are **non-`None`**), and the
   `mdt_value()` scalar convenience factory (its `case bool()` must stay **before**
-  `case int()` — `bool` is an `int` subclass).
+  `case int()` — `bool` is an `int` subclass), and `to_element_value()`, which adds
+  containers on top of it without a prototype: `ElementValue` passes through, `dict` →
+  `ElementCollectionValue` (keys must be `str`, `None` members kept), `list`/`tuple` →
+  `ElementListValue` (`None` members rejected), anything else → `mdt_value()`. Keep
+  `mdt_value()` scalar-only: its return type is `PropertyValue` and callers rely on it.
 - **`factory.py`** — `get_value(sme)`, `from_raw_object(value, proto)`,
   `from_raw_json_node(value, proto)`, `parse_json_node(jnode)`, `parse_json_string(s)`.
 - **`__init__.py`** — `update_element_with_raw_value(sme, raw)` + re-exports.

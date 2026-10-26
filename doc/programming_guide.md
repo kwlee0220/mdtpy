@@ -401,66 +401,133 @@ print(df)
 
 ## 8. Airflow DAG 통합
 
-`mdtpy.airflow` 모듈은 Apache Airflow DAG에서 MDT Operation을 호출하기 위한 도구를 제공한다.
-(`mdtpy/__init__.py`에서 자동 import되지 않으므로 필요 시 명시적으로 import한다.)
+`mdtpy.airflow` 모듈은 MDT 연산을 Apache Airflow task 하나의 본문으로 실행하기 위한 도구를 제공한다.
+(`mdtpy/__init__.py`에서 자동 import되지 않으므로 필요 시 명시적으로 import한다. Airflow는 `mdtpy`의
+의존성에 포함되지 않으므로 Airflow에서 사용할 때만 별도로 설치한다.)
+
+task 하나는 연산자(`Operator`) 하나로 표현한다. 연산자는 입력 명세(`inputs`)와 결과 기록 위치
+(`outputs`)를 받아 만들어지고, `run(context)`가 호출되면 `DagContext`를 통해 실제 값을 해석하여
+동작한다. Airflow 없이 실행할 때는 `LocalDagContext`를 넘긴다.
+
+### Operation 호출 태스크
 
 ```python
-import mdtpy
-from mdtpy.airflow import LocalDagContext, reference, task_output
-from mdtpy.airflow import AASOperationTaskInvocation, SetElementInvocation
+from mdtpy.airflow import LocalDagContext, reference
+from mdtpy.airflow import OperationSubmodelOperator
 
 MDT_MANAGER_URL = "http://localhost:12985/instance-manager"
-manager = mdtpy.connect(url=MDT_MANAGER_URL)
 
-# Operation 호출 태스크 정의
-dag_context = LocalDagContext("inspect_image", MDT_MANAGER_URL)
-AASOperationTaskInvocation(
+# inspector 인스턴스의 ThicknessInspection Operation submodel을 호출한다.
+OperationSubmodelOperator(
     instance="inspector",
     submodel="ThicknessInspection",
-    argument_specs={
-        'inputs': {
-            "UpperImage": reference("param:inspector:UpperImage")
-        }
-    }
-).run(dag_context)
+    inputs={
+        "UpperImage": reference("param:inspector:UpperImage"),
+    },
+).run(LocalDagContext("inspect_image", MDT_MANAGER_URL))
 ```
+
+`LocalDagContext`는 task id와 MDT Instance Manager URL을 받으므로 task마다 새로 만든다.
+
+### 입력 명세와 결과 기록 위치
+
+`inputs`의 값은 다음 세 팩토리로 만든다.
+
+| 팩토리 | 의미 |
+|---|---|
+| `reference(ref_string)` | 참조 대상의 값을 읽어 전달한다 (대상이 File이면 참조 자체를 전달) |
+| `task_output(task_id, arg_id)` | 선행 태스크가 남긴 출력 값을 전달한다 |
+| `literal(value)` | 고정 값을 전달한다 (스칼라는 `mdt_value()`로 감싸진다) |
+
+`outputs`의 값은 결과를 기록할 `ElementReference`이며 `sink(ref_string)`로 만든다.
+`reference()`는 입력 명세를 만드는 함수이므로 `outputs`에 쓰면 동작하지 않는다.
 
 ### 태스크 간 데이터 전달
 
 `task_output()`으로 이전 태스크의 출력 인자를 참조할 수 있다:
 
 ```python
-# 이전 태스크 'inspect_image'의 출력 'Defect'를 입력으로 사용
-dag_context = LocalDagContext("update_defect_list", MDT_MANAGER_URL)
-AASOperationTaskInvocation(
+from mdtpy.airflow import task_output, sink
+
+# 이전 태스크 'inspect_image'의 출력 'Defect'를 입력으로 사용하고,
+# 결과 'UpdatedDefectList'를 param:inspector:DefectList에 기록한다.
+OperationSubmodelOperator(
     instance="inspector",
     submodel="UpdateDefectList",
-    argument_specs={
-        'inputs': {
-            'Defect': task_output("inspect_image", "Defect"),
-            'DefectList': reference("param:inspector:DefectList"),
-        },
-        'outputs': {
-            'UpdatedDefectList': reference("param:inspector:DefectList")
-        }
-    }
-).run(dag_context)
+    inputs={
+        'Defect': task_output("inspect_image", "Defect"),
+        'DefectList': reference("param:inspector:DefectList"),
+    },
+    outputs={
+        'UpdatedDefectList': sink("param:inspector:DefectList"),
+    },
+).run(LocalDagContext("update_defect_list", MDT_MANAGER_URL))
 ```
 
 ### 값 읽기 태스크
 
-`SetElementInvocation`으로 파라미터 값을 읽어오는 태스크를 정의할 수 있다:
+`SetElementOperator`는 연산을 호출하지 않고 `source`의 값을 읽어 task 출력(`'target'` 키)으로 남긴다.
+`outputs={'target': sink(...)}`를 주면 읽은 값을 그 위치에도 기록한다.
 
 ```python
-dag_context = LocalDagContext("get_heater_cycle_time", MDT_MANAGER_URL)
-SetElementInvocation(
-    argument_specs={
-        'inputs': {
-            "source": reference("param:heater:CycleTime")
-        }
-    }
-).run(dag_context)
+from mdtpy.airflow import SetElementOperator
+
+SetElementOperator(
+    inputs={'source': reference("param:heater:CycleTime")},
+).run(LocalDagContext("get_heater_cycle_time", MDT_MANAGER_URL))
+
+# 후속 태스크에서는 task_output("get_heater_cycle_time", "target")으로 참조한다.
 ```
+
+### Airflow DAG 안에서 실행
+
+`run()`에 컨텍스트를 넘기지 않으면 `AirflowDagContext`가 사용된다. task 출력은 XCom으로 전달되고,
+MDT Instance Manager URL은 Airflow `Variable`의 `mdt_manager_url`에서 읽는다.
+
+```python
+from airflow.sdk import dag, task
+from mdtpy.airflow import reference, task_output, sink
+from mdtpy.airflow.operator import OperationSubmodelOperator
+
+@dag(dag_id="inspection", tags=["mdt"])
+def _dag():
+    @task(task_id="inspect_image")
+    def _t1() -> None:
+        OperationSubmodelOperator(
+            instance="inspector",
+            submodel="ThicknessInspection",
+            inputs={"UpperImage": reference("param:inspector:UpperImage")},
+        ).run()
+
+    @task(task_id="update_defect_list")
+    def _t2() -> None:
+        OperationSubmodelOperator(
+            instance="inspector",
+            submodel="UpdateDefectList",
+            inputs={
+                'Defect': task_output("inspect_image", "Defect"),
+                'DefectList': reference("param:inspector:DefectList"),
+            },
+            outputs={'UpdatedDefectList': sink("param:inspector:DefectList")},
+        ).run()
+
+    _t1() >> _t2()
+
+_dag()
+```
+
+### 그 밖의 연산자
+
+| 연산자 | 용도 |
+|---|---|
+| `AASOperationOperator(instance, submodel, path, *, inputs, outputs={})` | submodel 안의 AAS `Operation`을 idShort 경로로 직접 호출 |
+| `RestfulAsyncRpcOperator(base_url, op_endpoint, *, inputs, outputs={})` | 원격 연산을 비동기 RESTful RPC로 호출 (상태 폴링) |
+| `RestfulRpcOperator(op_url, *, timeout=None, inputs, outputs={})` | 원격 연산을 동기 RESTful RPC로 호출 (단일 POST) |
+| `PythonScriptOperator(script, *, inputs, outputs={})` | 인라인 Python script 실행 |
+
+연산자마다 후속 태스크로 전달되는 출력의 범위가 다르다. 자세한 내용은
+[src/mdtpy/airflow/README.md](../src/mdtpy/airflow/README.md)와
+[src/mdtpy/airflow/operator/README.md](../src/mdtpy/airflow/operator/README.md)를 참고한다.
 
 ## 9. BaSyx 직렬화/역직렬화
 

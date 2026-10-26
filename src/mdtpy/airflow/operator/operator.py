@@ -3,7 +3,7 @@
 `Operator`는 `DagTaskArgument`로 기술된 입력 명세를 받아, task 실행 시점에
 `DagContext`를 통해 실제 값을 해석하고 동작을 수행한다. 구체 구현들은
 `set_element` / `operation_submodel` / `aas_operation` / `restful_async_rpc` /
-`ai_model_call` / `python_script` 모듈에 각각 분리되어 있다.
+`restful_rpc` / `python_script` 모듈에 각각 분리되어 있다.
 """
 
 from __future__ import annotations

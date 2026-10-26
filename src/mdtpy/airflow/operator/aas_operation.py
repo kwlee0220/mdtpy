@@ -6,7 +6,7 @@ from typing import Mapping, Optional
 
 import logging
 
-from ... import ElementReference, OperationSubmodelService
+from ... import ElementReference
 from ...operation.aas_operation import AASOperationService
 from ..dag_context import DagContext, AirflowDagContext
 from .operator import Operator, DagTaskInputArgument
@@ -27,17 +27,19 @@ class AASOperationOperator(Operator):
         self.outputs = outputs
 
     def run(self, context:Optional[DagContext]=None) -> None:
-        """대상 submodel이 Operation submodel인지 확인한 뒤 인자를 해석하여 호출한다."""
+        """submodel 내 `path` 위치의 Operation을 인자를 해석하여 호출한다.
+
+        submodel의 종류(Data/Simulation/AI 등)는 확인하지 않는다. AAS `Operation` 요소는 어느
+        submodel에나 있을 수 있고(예: Data submodel의 로봇 이동 연산), 호출은 submodel 공통의
+        invoke 경로를 쓰기 때문이다. Java `AASOperationTask`도 같은 방식으로 동작한다.
+        `path`가 가리키는 요소가 `Operation`인지는 `AASOperationService`가 확인한다.
+        """
         logger.info(f"Invoking operation {self.instance}:{self.submodel}:{self.path} "
                     f"with inputs {self.inputs} and outputs {self.outputs}")
         if context is None:
             context = AirflowDagContext()
 
         submodel_svc = context.get_submodel(self.instance, self.submodel)
-        # 조회된 Submodel이 OperationSubmodelService가 아니면 예외를 발생시킨다.
-        if not isinstance(submodel_svc, OperationSubmodelService):
-            raise ValueError(f"Submodel {self.instance}:{self.submodel} is not an operation submodel")
-
         op_client = AASOperationService(submodel_svc, self.path)
         in_args = { arg_id: arg.get(context) for arg_id, arg in self.inputs.items() }
         results = op_client.invoke(**in_args)

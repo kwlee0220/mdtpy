@@ -160,9 +160,12 @@ class AirflowDagContext(DagContext):
 
     @property
     def mdt_manager(self) -> MDTInstanceManager:
-        """AirflowDagContext 인스턴스 생성 시점이 아니라, 실제 task 실행 시점에 접속한다."""
-        if self.__mdt_manager is None:
-            self.__mdt_manager = connect(self.__mdt_manager_url)
+        """생성자에서 `connect()`로 만든 `MDTInstanceManager`를 반환한다.
+
+        `connect()`는 URL을 담은 클라이언트 객체만 만들고 서버와 통신하지 않으며, 실제 통신은
+        조회 시점에 일어난다. operator들은 컨텍스트가 주어지지 않으면 `run()` 안에서 본 컨텍스트를
+        생성하므로, 생성도 task 실행 시점에 이루어진다.
+        """
         return self.__mdt_manager
 
     @property

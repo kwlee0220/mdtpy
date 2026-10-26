@@ -57,9 +57,10 @@ ref.update_with_raw_value(raw)
 
 ```python
 from basyx.aas import model
-from mdtpy.value import PropertyValue, FileValue, MLPropertyValue, mdt_value
+from mdtpy.value import PropertyValue, FileValue, MLPropertyValue, mdt_value, to_element_value
 
 mdt_value(42)                                    # 타입 자동 판별 (bool 이 int 보다 우선)
+to_element_value({'x': 0.42, 'dims': [1, 2]})    # dict -> ElementCollectionValue, list -> ElementListValue (재귀)
 PropertyValue(42, model.datatypes.Int)           # value_type 명시 (필수 인자)
 FileValue.from_file_path('/path/img.jpg')        # MIME 타입 자동 추론
 MLPropertyValue({'en': 'Welder', 'ko': '용접기'})
@@ -114,7 +115,7 @@ ev2 = parse_json_string(json_str)   # 왕복 보장
 
 | 파일 | 내용 |
 |---|---|
-| `element_value.py` | `ElementValue` ABC + 6개 서브클래스, `mdt_value()`, `FileValue.from_file_path()` |
+| `element_value.py` | `ElementValue` ABC + 6개 서브클래스, `mdt_value()`, `to_element_value()`, `FileValue.from_file_path()` |
 | `factory.py` | 역직렬화/생성 진입점: `get_value`, `from_raw_object`, `from_raw_json_node`, `parse_json_node`, `parse_json_string` |
 | `codec.py` | `@type` 상수, XSD ↔ 타입 식별자 매핑, 스칼라 인코딩/디코딩 (내부용) |
 | `types.py` | 타입 별칭 (`RawElementValueType`, `ElementJsonValueType`, `FileJsonValue` 등) |

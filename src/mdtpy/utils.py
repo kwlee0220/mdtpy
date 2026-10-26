@@ -22,22 +22,33 @@ T = TypeVar('T')
 # JSON 직렬화 헬퍼
 # --------------------------------------------------------------------------- #
 
+# basyx 가 XSD 데이터 타입 값을 표현하는 Python 클래스들.
+# `ElementValue.to_raw_object()` 는 xs:duration → relativedelta, xs:decimal → Decimal,
+# xs:time → datetime.time 처럼 이 클래스의 값을 돌려주는데, 표준 json 모듈은 이들을 직렬화하지 못한다.
+_XSD_VALUE_CLASSES: tuple[type, ...] = tuple(set(model.datatypes.XSD_TYPE_CLASSES.values()))
+
+
 def json_serializer(obj: Any) -> Any:
     """
     `json.dumps`의 `default` 인자로 사용할 수 있는 직렬화 콜백.
 
-    `datetime`/`date`만 ISO 8601 문자열로 변환한다. 그 외의 타입에 대해서는
-    `TypeError`를 발생시켜 호출자가 인식하지 못하는 객체를 알아챌 수 있게 한다.
+    `datetime`/`date`는 ISO 8601 문자열로 변환한다. 그 밖에 basyx XSD 데이터 타입의 값
+    (xs:duration 의 `relativedelta`, xs:decimal 의 `Decimal`, xs:time, xs:gYear 등)은
+    `model.datatypes.xsd_repr()`로 XSD 어휘 표현 문자열(예: `"PT5M"`, `"1.5"`)로 변환한다.
+    이는 MDT 서버와 AAS 직렬화가 쓰는 표현과 같다. 그 외의 타입에 대해서는 `TypeError`를
+    발생시켜 호출자가 인식하지 못하는 객체를 알아챌 수 있게 한다.
 
     Args:
         obj (Any): 직렬화 대상 객체.
     Returns:
-        Any: ISO 8601 문자열 (datetime/date인 경우).
+        Any: ISO 8601 문자열 (datetime/date인 경우) 또는 XSD 어휘 표현 문자열.
     Raises:
         TypeError: 지원하지 않는 타입인 경우.
     """
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
+    if isinstance(obj, _XSD_VALUE_CLASSES):
+        return model.datatypes.xsd_repr(obj)
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 

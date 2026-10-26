@@ -342,9 +342,10 @@ Prefer these over generic `RuntimeError`/`ValueError` when writing mdtpy-based s
 - **`mdtpy.airflow`** — Airflow DAG operators for orchestrating twin operations:
   `LocalDagContext` (no Airflow needed) / `AirflowDagContext`, operators
   `AASOperationOperator`, `OperationSubmodelOperator`, `RestfulAsyncRpcOperator`,
-  `SetElementOperator`, and argument combinators `reference(...)`, `task_output(task, key)`,
-  `sink(ref_string)`, `literal(x)`. Full pipeline example: `src/samples/sample_inspector_simiulation.py`.
-  Details: `src/mdtpy/airflow/CLAUDE.md`, `src/mdtpy/airflow/README.md`.
+  `SetElementOperator`, `RestfulRpcOperator`, `PythonScriptOperator`, and argument combinators
+  `reference(...)`, `task_output(task, key)`, `sink(ref_string)`, `literal(x)`.
+  Full pipeline example: `src/samples/sample_inspector_simiulation.py`.
+  Details: `src/mdtpy/airflow/CLAUDE.md`, `src/mdtpy/airflow/operator/README.md`.
 - **`mdtpy.rpc.restful`** — direct RESTful RPC to an operation server:
   `RESTfulRpcClient` (sync) / `RESTfulAsyncRpcClient` (poll-based).
   `RESTfulAsyncRpcClient(base_url, op_endpoint, inputs, outputs=None).call() -> outputs dict`;
@@ -353,8 +354,12 @@ Prefer these over generic `RuntimeError`/`ValueError` when writing mdtpy-based s
 
 ## 1.13 Serialization helpers
 
-- `mdtpy.json_dumps(obj)` — `json.dumps` with datetime→ISO 8601 support. It does **NOT**
-  serialize `ElementValue` objects; call `.to_raw_object()` first.
+- `mdtpy.json_dumps(obj)` — `json.dumps` with `default=json_serializer`: datetime/date →
+  ISO 8601, and basyx XSD values that `to_raw_object()` can return (xs:duration
+  `relativedelta`, xs:decimal `Decimal`, xs:time, xs:gYear…, base64/hex binary) → their XSD
+  lexical string via `model.datatypes.xsd_repr` (e.g. `"PT5M"`, `"1.5"`). Any other
+  unknown type still raises `TypeError`. It does **NOT** serialize `ElementValue` objects;
+  call `.to_raw_object()` first.
 - `mdtpy.basyx.serde.to_json(x)` / `from_json(s)` — serialize basyx model objects
   (Submodel, SubmodelElement, AAS shells).
 - Descriptors (`InstanceDescriptor` etc.) are `dataclass-wizard` `JSONWizard`s:
@@ -427,7 +432,8 @@ tests — don't model new unit tests after them.
   forms are resolved server-side (`/references/$url`, `/references/$json`). The structured
   client-side reference classes and `ref/serde.py` were removed.
 - **Value serde:** the manager `$value` path uses the polymorphic `@type` pair
-  (`to_json_node`/`parse_json_node`); `$raw` uses plain `json.dumps(default=json_serializer)`.
+  (`to_json_node`/`parse_json_node`); `$raw` uses plain `json.dumps(default=json_serializer)`,
+  so raw duration/decimal values are sent as XSD lexical strings (`"PT5M"`, `"1.5"`).
   The bare-wire pair (`to_raw_json_node`/`from_raw_json_node`) currently has no production
   caller (kept for tests/compat). All value deserialization entry points live in
   `value/factory.py`.

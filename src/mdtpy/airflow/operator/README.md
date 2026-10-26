@@ -100,7 +100,7 @@ innercase_dag()
 | `OperationSubmodelOperator` | MDT Operation submodel 호출 (등록정보 기반) | `operation_submodel.py` |
 | `AASOperationOperator` | submodel 내 AAS `Operation`을 idShort 경로로 직접 호출 | `aas_operation.py` |
 | `RestfulAsyncRpcOperator` | 원격 연산을 비동기 RESTful RPC로 호출 (상태 폴링) | `restful_async_rpc.py` |
-| `AIModelCallOperator` | AI 모델 연산을 동기 RESTful RPC로 호출 (단일 POST) | `ai_model_call.py` |
+| `RestfulRpcOperator` | AI 모델 연산을 동기 RESTful RPC로 호출 (단일 POST) | `restful_rpc.py` |
 | `PythonScriptOperator` | 인라인 Python script 실행 | `python_script.py` |
 
 동작 차이가 실제로 문제가 되는 두 지점:
@@ -108,11 +108,13 @@ innercase_dag()
 | | 선언되지 않은 출력 | `outputs` 값에 `None` |
 |---|---|---|
 | `OperationSubmodelOperator` / `AASOperationOperator` / `RestfulAsyncRpcOperator` | 연산이 반환한 **모든** 결과가 task 출력으로 전달된다 | 허용되지 않음 (기록 시 오류) |
-| `AIModelCallOperator` / `PythonScriptOperator` | **선언된 출력만** task 출력으로 전달된다 (나머지는 무시) | 허용됨 — 기록은 생략하고 후속 task에만 전달 |
+| `RestfulRpcOperator` | **선언된 출력만** task 출력으로 전달된다 (나머지는 무시) | 허용됨 — 기록은 생략하고 후속 task에만 전달 |
+| `PythonScriptOperator` | script가 `outputs` dict에 넣은 **모든** 값이 task 출력으로 전달된다 (`outputs` 인자는 기록 위치만 지정) | 허용됨 — 아무 효과 없음 (선언하지 않아도 전달되므로) |
 | `SetElementOperator` | 출력 이름은 항상 `'target'` 하나 | 해당 없음 |
 
-또한 `AIModelCallOperator` / `PythonScriptOperator`는 선언된 출력이 산출되지 않으면
-`KeyError`를 발생시키며, 일부만 기록된 채 실패하지 않도록 **모든 출력 값을 먼저 변환한 뒤에** 기록한다.
+선언된 출력이 산출되지 않으면 `RestfulRpcOperator`는 `KeyError`를 발생시키고, `PythonScriptOperator`는
+(저장 위치가 지정된 이름을 script가 넣지 않은 경우) 기록하지 않고 넘어간다. 두 연산자와
+`RestfulAsyncRpcOperator`는 일부만 기록된 채 실패하지 않도록 **모든 출력 값을 먼저 변환한 뒤에** 기록한다.
 
 ---
 
@@ -168,7 +170,9 @@ submodel 내부의 AAS `Operation` SubmodelElement를 **idShort 경로(`path`)**
 호출한다 (`AASOperationService`). 등록정보 기반의 기본 입력/출력 참조 보완이 없는, 더 낮은
 수준의 호출이다.
 
-- 조회한 submodel이 `OperationSubmodelService`가 아니면 `ValueError`.
+- submodel의 종류는 확인하지 않는다. Data submodel 안의 `Operation`(예: 로봇 이동 연산)도
+  호출할 수 있다 — Java `AASOperationTask`와 같은 동작이다. 등록정보가 필요한
+  `OperationSubmodelOperator`와 달리 submodel 공통의 invoke 경로만 쓰기 때문이다.
 - `path`가 가리키는 요소가 `model.Operation`이 아니면 `ValueError`.
 - 반환된 결과 중 `outputs`에 선언된 것만 기록되고, **모든** 결과가 task 출력으로 전달된다.
 
@@ -195,7 +199,9 @@ AASOperationOperator(
 - 최종 호출 URL은 `base_url + op_endpoint`로 단순 연결되므로 `op_endpoint`는 `/`로 시작해야 한다.
 - `base_url` / `op_endpoint`가 비어 있으면 `ValueError`.
 - 연산이 `FAILED`면 `RpcExecutionError`(원인 예외가 `__cause__`), `CANCELLED`면 `RpcCancelledError`.
-- `ElementValue`가 아닌 결과 값은 `mdt_value()`로 감싸 변환한 뒤 기록/전달한다.
+- `ElementValue`가 아닌 결과 값은 `mdt_value()`로 감싸 변환한 뒤 기록/전달한다. 변환은 기록 전에
+  모든 결과에 대해 먼저 수행되므로, 변환할 수 없는 결과가 하나라도 있으면 `ValueError`이며 아무것도
+  기록되지 않는다.
 - 반환된 결과 중 `outputs`에 선언된 것만 기록되고, **모든** 결과가 task 출력으로 전달된다.
 
 ```python
@@ -219,22 +225,22 @@ inputs = {
 }
 ```
 
-## `AIModelCallOperator(model_url, *, timeout=None, inputs, outputs={})`
+## `RestfulRpcOperator(op_url, *, timeout=None, inputs, outputs={})`
 
-AI 모델 연산을 **동기** RESTful RPC로 호출한다(`RESTfulRpcClient`). 상태 폴링 없이 단일 POST가
+원격 연산을 **동기** RESTful RPC로 호출한다(`RESTfulRpcClient`). 상태 폴링 없이 단일 POST가
 연산 종료 시점까지 블록하고, 그 응답에 출력이 실려온다. 그래서 `base_url` + `op_endpoint`로
-나누지 않고 모델 URL 전체를 `model_url`로 받는다.
+나누지 않고 연산 호출 URL 전체를 `op_url`로 받는다.
 
 - `timeout`(초)은 응답 대기 제한이며 기본값은 **제한 없음**(`None`) — AI 모델 추론이 수 분
   이상 걸릴 수 있기 때문이다.
-- `model_url`이 비어 있으면 `ValueError`.
+- `op_url`이 비어 있으면 `ValueError`.
 - 입력은 `encode_argument_to_json_node()`로 JSON 노드로 변환되어 전송된다 (File 참조는 값 대신
   참조 자체가 전송된다).
 - `outputs`에 선언한 출력을 연산이 반환하지 않으면 `KeyError`.
 - 선언된 출력만 task 출력으로 전달되며, 기록 위치가 `None`인 출력은 후속 task에만 전달된다.
 
 ```python
-AIModelCallOperator(
+RestfulRpcOperator(
     "http://localhost:9000/api/v1/models/defect-detector",
     timeout = 600,                       # 생략하면 무제한 대기
     inputs = { 'UpperImage': reference("param:inspector:UpperImage") },
@@ -247,22 +253,31 @@ AIModelCallOperator(
 
 ## `PythonScriptOperator(script, *, inputs, outputs={})`
 
-인라인 Python script를 실행한다. script는 `inputs`라는 이름의 dict(입력 이름 → 해석된 입력 값)를
-전역 변수로 받고, 실행이 끝나면 `outputs`에 선언된 **이름과 같은 변수**의 값이 출력으로 수집된다.
+인라인 Python script를 실행한다. script는 두 dict를 전역 변수로 받는다 — `inputs`(입력 이름 → 해석된
+입력 값)와 빈 dict `outputs`. script가 `outputs['<출력 이름>'] = 값`으로 넣은 값은 **모두** task 출력으로
+후속 task에 전달되고, operator의 `outputs` 인자는 그중 어떤 값을 어디에 기록할지만 정한다.
+같은 이름의 **변수에 대입하는 것만으로는 출력되지 않는다.**
 
 - `inputs[...]` 값은 raw 값이 아니라 `ElementValue`다 — 원시 값이 필요하면 `to_raw_object()`를 쓴다.
 - script는 단일 namespace(globals=locals)에서 실행되므로, 최상위에서 정의한 이름과 `import`한
   모듈을 함수/lambda/generator 안에서도 사용할 수 있다.
-- 선언된 출력 변수를 script가 정의하지 않으면 `KeyError`.
-- `ElementValue`가 아닌 값은 `mdt_value()`로 감싸 변환된다.
-- 선언된 출력만 task 출력으로 전달되며, 기록 위치가 `None`인 출력은 후속 task에만 전달된다.
+- 저장 위치가 지정된 이름을 script가 `outputs`에 넣지 않으면 오류 없이 기록을 건너뛴다. 후속 task가
+  script가 넣지 않은 출력을 참조하면 그 시점에 `KeyError`가 난다.
+- `ElementValue`가 아닌 값은 `to_element_value()`로 변환된다. 스칼라는 `PropertyValue`, dict는
+  `ElementCollectionValue`, list/tuple은 `ElementListValue`가 되며 멤버까지 재귀적으로 변환된다. 그래서
+  계산한 자세를 `{'Position': {...}, 'Orientation': {...}}` 같은 dict로 넣으면 후속 `AASOperationOperator`가
+  SMC 입력 변수로 받을 수 있다. 변환할 수 없는 값이 하나라도 있으면 `ValueError`이며, 이때는 어떤 출력도
+  기록되지 않는다.
+- 기록하지 않고 후속 task에만 넘길 값은 `outputs` 인자에 선언할 필요가 없다. 저장 위치가 `None`인
+  항목은 이전 버전과의 호환을 위해 허용되지만 아무 효과가 없다.
 
 ```python
 SCRIPT = """
 cycle_times = { name: value.to_raw_object() for name, value in inputs.items() }
 
-BottleneckProcess = max(cycle_times, key=lambda name: cycle_times[name])
-BottleneckCycleTime = float(cycle_times[BottleneckProcess])
+bottleneck = max(cycle_times, key=lambda name: cycle_times[name])
+outputs['BottleneckProcess'] = bottleneck
+outputs['BottleneckCycleTime'] = float(cycle_times[bottleneck])
 """
 
 PythonScriptOperator(
@@ -274,7 +289,7 @@ PythonScriptOperator(
     },
     outputs = {
         'BottleneckCycleTime': sink("param:test:Data"),   # 기록 + 후속 task 전달
-        'BottleneckProcess': None,                        # 후속 task 전달만
+        # 'BottleneckProcess'는 선언하지 않아도 후속 task에 전달된다.
     },
 ).run(ctx)
 ```
@@ -305,7 +320,7 @@ PythonScriptOperator(
 | `operation_submodel.py` | `OperationSubmodelOperator` |
 | `aas_operation.py` | `AASOperationOperator` |
 | `restful_async_rpc.py` | `RestfulAsyncRpcOperator` |
-| `ai_model_call.py` | `AIModelCallOperator` |
+| `restful_rpc.py` | `RestfulRpcOperator` |
 | `python_script.py` | `PythonScriptOperator` |
 | `__init__.py` | 위 구현들을 모두 re-export |
 

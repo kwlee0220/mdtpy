@@ -32,8 +32,10 @@ from mdtpy.value import (
     from_raw_json_node,
     from_raw_object,
     get_value,
+    mdt_value,
     parse_json_node,
     parse_json_string,
+    to_element_value,
     update_element_with_raw_value,
 )
 
@@ -682,3 +684,55 @@ class TestJsonRoundTrip:
         })
         assert parse_json_node(original.to_json_node()) == original
         assert parse_json_string(original.to_json_string()) == original
+
+
+# ---------------------------------------------------------------------------
+# to_element_value  (원시 값 → ElementValue, 컨테이너는 재귀 변환)
+# ---------------------------------------------------------------------------
+
+class TestToElementValue:
+    def test_scalar_same_as_mdt_value(self):
+        for raw in ("x", True, 3, 1.5, timedelta(seconds=2)):
+            assert to_element_value(raw) == mdt_value(raw)
+
+    def test_element_value_passed_through(self):
+        ev = PropertyValue(7, model.datatypes.Int)
+        assert to_element_value(ev) is ev
+
+    def test_nested_dict_and_list(self):
+        # 로봇 자세처럼 중첩된 dict가 SMC 구조의 값이 된다.
+        raw = {"Position": {"x": 0.42, "y": -0.1, "z": 0.64},
+               "Orientation": {"x": 0.92, "y": -0.38, "z": 0.0, "w": 0.0},
+               "Dimensions": [0.05, 0.05, 0.05],
+               "Name": "block_a"}
+        ev = to_element_value(raw)
+
+        assert isinstance(ev, ElementCollectionValue)
+        assert isinstance(ev["Position"], ElementCollectionValue)
+        assert isinstance(ev["Dimensions"], ElementListValue)
+        assert ev["Position"]["x"] == mdt_value(0.42)
+        assert ev.to_raw_object() == raw
+
+    def test_tuple_becomes_list(self):
+        assert to_element_value((1, 2)).to_raw_object() == [1, 2]
+
+    def test_none_member_kept_in_collection(self):
+        ev = to_element_value({"a": 1, "b": None})
+        assert ev["b"] is None
+
+    def test_json_round_trip(self):
+        # Airflow는 task 출력을 to_json_node()로 저장하고 parse_json_node()로 복원한다.
+        ev = to_element_value({"pose": {"x": 0.42, "flag": True}, "list": [1, 2, 3]})
+        assert parse_json_node(ev.to_json_node()) == ev
+
+    def test_none_list_member_rejected(self):
+        with pytest.raises(ValueError, match="must not be None"):
+            to_element_value([1, None])
+
+    def test_non_string_key_rejected(self):
+        with pytest.raises(ValueError, match="must be a string"):
+            to_element_value({1: "x"})
+
+    def test_unsupported_type_rejected(self):
+        with pytest.raises(ValueError, match="unsupported property value type"):
+            to_element_value(object())

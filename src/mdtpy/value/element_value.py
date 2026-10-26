@@ -48,6 +48,43 @@ def mdt_value(value: PropertyJsonValue) -> PropertyValue:
             raise ValueError(f"unsupported property value type: {type(value)}")
 
 
+def to_element_value(value: Any) -> ElementValue:
+    """원시 Python 값을 ElementValue 로 변환한다. dict / list 는 멤버까지 재귀적으로 변환한다.
+
+    :func:`mdt_value` 는 스칼라만 받는다. 이 함수는 그 위에 컨테이너를 더해, 중첩된 원시 값을
+    SubmodelElement 구조에 대응하는 값으로 만든다.
+
+    * ``ElementValue`` — 그대로 반환한다.
+    * ``dict`` — :class:`ElementCollectionValue`. 키는 멤버 idShort 이므로 문자열이어야 하며,
+      값이 ``None`` 인 멤버는 ``None`` 으로 둔다.
+    * ``list`` / ``tuple`` — :class:`ElementListValue`. 멤버로 ``None`` 을 둘 수 없다.
+    * 그 밖의 값 — :func:`mdt_value` 로 변환한다 (str / bool / int / float / timedelta).
+
+    Args:
+        value (Any): 변환할 원시 Python 값.
+    Returns:
+        ElementValue: 변환된 값.
+    Raises:
+        ValueError: 지원되지 않는 타입이거나, dict 키가 문자열이 아니거나, list 멤버가 ``None`` 인 경우.
+    """
+    match value:
+        case ElementValue():
+            return value
+        case dict():
+            members: dict[str, Optional[ElementValue]] = {}
+            for key, member in value.items():
+                if not isinstance(key, str):
+                    raise ValueError(f"collection member name must be a string: {key!r}")
+                members[key] = to_element_value(member) if member is not None else None
+            return ElementCollectionValue(members)
+        case list() | tuple():
+            if any(member is None for member in value):
+                raise ValueError(f"list member must not be None: {value!r}")
+            return ElementListValue([to_element_value(member) for member in value])
+        case _:
+            return mdt_value(value)
+
+
 # --------------------------------------------------------------------------- #
 # 값 클래스 (ElementValue 계층)
 # --------------------------------------------------------------------------- #

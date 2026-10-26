@@ -14,7 +14,7 @@ from .types import (
 )
 from .element_value import (
     ElementValue, PropertyValue, FileValue, RangeValue, MLPropertyValue,
-    ElementCollectionValue, ElementListValue, mdt_value,
+    ElementCollectionValue, ElementListValue, mdt_value, to_element_value,
 )
 from .factory import (
     get_value, from_raw_object, from_raw_json_node, parse_json_node, parse_json_string,

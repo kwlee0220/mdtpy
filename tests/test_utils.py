@@ -56,7 +56,23 @@ class TestJsonSerializer:
         d = date(2024, 1, 1)
         assert json_serializer(d) == "2024-01-01"
 
-    @pytest.mark.parametrize("value", [object(), set([1, 2]), 3.14j])
+    @pytest.mark.parametrize("xsd_type, lexical", [
+        (model.datatypes.Duration, "PT5M"),
+        (model.datatypes.Decimal, "1.5"),
+        (model.datatypes.Time, "03:04:05"),
+        (model.datatypes.GYearMonth, "2024-01"),
+        (model.datatypes.Base64Binary, "aGVsbG8="),
+    ])
+    def test_xsd_value_serialized_as_lexical_representation(self, xsd_type, lexical):
+        """basyx XSD 타입 값은 서버와 같은 XSD 어휘 표현으로 직렬화된다."""
+        value = model.datatypes.from_xsd(lexical, xsd_type)
+        assert json_serializer(value) == lexical
+
+    def test_dumps_value_containing_duration(self):
+        value = {"Temp": 850, "Hold": model.datatypes.from_xsd("PT30M", model.datatypes.Duration)}
+        assert json.loads(json_dumps(value)) == {"Temp": 850, "Hold": "PT30M"}
+
+    @pytest.mark.parametrize("value", [object(), set([1, 2]), 3.14j, bytearray(b"x")])
     def test_unsupported_type_raises_type_error(self, value):
         with pytest.raises(TypeError, match="not JSON serializable"):
             json_serializer(value)

@@ -9,23 +9,31 @@ XCom의 JSON 직렬화 제약을 재현한다.
 from __future__ import annotations
 
 import json
+import sys
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
+from basyx.aas import model
 
+from mdtpy.aas_misc import OperationVariable
 from mdtpy.airflow import (
+    AASOperationOperator,
     OperationSubmodelOperator,
     AirflowDagContext,
     LocalDagContext,
+    PythonScriptOperator,
+    RestfulAsyncRpcOperator,
     SetElementOperator,
     literal,
     reference,
     task_output,
 )
 from mdtpy.airflow.dag_context import DagContext
+from mdtpy.airflow.operator import restful_async_rpc as restful_async_rpc_module
 from mdtpy.operation import OperationSubmodelService
 from mdtpy.ref import BaseElementReference, ElementReference
-from mdtpy.value import FileValue, PropertyValue, mdt_value
+from mdtpy.submodel import SubmodelService
+from mdtpy.value import ElementCollectionValue, ElementListValue, FileValue, PropertyValue, mdt_value
 
 MANAGER_URL = "http://localhost:12985/instance-manager"
 
@@ -231,6 +239,33 @@ class TestAirflowDagContext:
         ctx._AirflowDagContext__mdt_manager_url = MANAGER_URL
         assert MANAGER_URL in repr(ctx)
 
+    @staticmethod
+    def _fake_airflow_sdk(variable_url: str = MANAGER_URL):
+        """Airflow 미설치 환경에서 생성자의 `from airflow.sdk import Variable`을 대신할 가짜 모듈."""
+        fake_sdk = MagicMock()
+        fake_sdk.Variable.get.return_value = variable_url
+        return fake_sdk, patch.dict(sys.modules, {"airflow": MagicMock(sdk=fake_sdk), "airflow.sdk": fake_sdk})
+
+    def test_constructor_reads_url_from_variable_and_connects(self):
+        # URL을 주지 않으면 Airflow Variable 'mdt_manager_url'을 읽고, 생성 시점에 connect()한다.
+        fake_sdk, fake_modules = self._fake_airflow_sdk()
+        with fake_modules, patch("mdtpy.airflow.dag_context.connect") as m_connect:
+            ctx = AirflowDagContext()
+
+        fake_sdk.Variable.get.assert_called_once_with("mdt_manager_url")
+        m_connect.assert_called_once_with(MANAGER_URL)
+        assert ctx.mdt_manager is m_connect.return_value
+
+    def test_constructor_uses_given_url_without_variable(self):
+        other_url = "http://other:12985/instance-manager"
+        fake_sdk, fake_modules = self._fake_airflow_sdk()
+        with fake_modules, patch("mdtpy.airflow.dag_context.connect") as m_connect:
+            ctx = AirflowDagContext(other_url)
+
+        fake_sdk.Variable.get.assert_not_called()
+        m_connect.assert_called_once_with(other_url)
+        assert ctx.mdt_manager is m_connect.return_value
+
 
 # --------------------------------------------------------------------------- #
 # Operator  (task 본문)
@@ -294,3 +329,173 @@ class TestOperationSubmodelOperator:
         # 입력은 값으로, 출력 대상은 ElementReference로 병합되어 invoke에 전달된다.
         submodel.invoke.assert_called_once_with(A=mdt_value(1), B=out_ref)
         context.set_task_outputs.assert_called_once_with({"B": mdt_value(2)})
+
+
+class TestAASOperationOperator:
+    @staticmethod
+    def _data_submodel(operation):
+        """`Operations.Op` 위치에 주어진 요소를 갖는 일반(Data) submodel 서비스."""
+        submodel = MagicMock(spec=SubmodelService)  # OperationSubmodelService가 아님
+        submodel.submodel_elements = {"Operations.Op": operation}
+        return submodel
+
+    def test_invokes_operation_in_data_submodel(self):
+        # AAS Operation 요소는 Data submodel 안에도 있을 수 있다 (예: 로봇 이동 연산).
+        # submodel 종류와 관계없이 호출되어야 한다 — Java AASOperationTask와 같은 동작.
+        operation = model.Operation("Op",
+                                    input_variable=[model.Property("X", model.datatypes.Int)],
+                                    output_variable=[model.Property("Y", model.datatypes.Int)])
+        submodel = self._data_submodel(operation)
+        result = MagicMock(success=True, inoutput_op_variables=None,
+                           output_op_variables=[OperationVariable(value=model.Property("Y", model.datatypes.Int, 7))])
+        submodel.invoke_operation_sync.return_value = result
+        out_ref = MagicMock(spec=ElementReference)
+        context = MagicMock()
+        context.get_submodel.return_value = submodel
+
+        AASOperationOperator("panda01", "Data", "Operations.Op",
+                             inputs={"X": literal(3)}, outputs={"Y": out_ref}).run(context)
+
+        context.get_submodel.assert_called_once_with("panda01", "Data")
+        path, in_vars, _ = submodel.invoke_operation_sync.call_args.args[:3]
+        assert path == "Operations.Op"
+        assert [(v.value.id_short, v.value.value) for v in in_vars] == [("X", 3)]
+        out_ref.update_value.assert_called_once_with(mdt_value(7))
+        context.set_task_outputs.assert_called_once_with({"Y": mdt_value(7)})
+
+    def test_rejects_path_that_is_not_an_operation(self):
+        submodel = self._data_submodel(model.Property("Op", model.datatypes.Int))
+        context = MagicMock()
+        context.get_submodel.return_value = submodel
+        with pytest.raises(ValueError, match="not an Operation"):
+            AASOperationOperator("panda01", "Data", "Operations.Op", inputs={}).run(context)
+
+
+class TestPythonScriptOperator:
+    def test_raw_output_converted_for_record_and_task_output(self, local_ctx):
+        # 원시 값은 mdt_value()로 변환되어 저장 위치와 task 출력 양쪽에 같은 값으로 전달된다.
+        out_ref = MagicMock(spec=ElementReference)
+        PythonScriptOperator("outputs['answer'] = 42",
+                             inputs={}, outputs={"answer": out_ref}).run(local_ctx)
+
+        out_ref.update_value.assert_called_once_with(mdt_value(42))
+        assert local_ctx.get_task_output("task1", "answer") == mdt_value(42)
+
+    def test_inputs_visible_in_script(self):
+        context = MagicMock()
+        PythonScriptOperator("outputs['doubled'] = inputs['x'].to_raw_object() * 2",
+                             inputs={"x": literal(21)}).run(context)
+
+        context.set_task_outputs.assert_called_once_with({"doubled": mdt_value(42)})
+
+    def test_dict_and_list_outputs_converted(self):
+        # dict/list 출력은 ElementCollectionValue/ElementListValue로 변환된다. 예를 들어 계산한
+        # 자세를 dict로 내면 후속 AASOperationTask가 SMC 입력(TargetPose 등)으로 받을 수 있다.
+        context = MagicMock()
+        script = ("outputs['pose'] = {'Position': {'x': 0.42, 'y': -0.1, 'z': 0.64}}\n"
+                  "outputs['dims'] = [0.05, 0.05]")
+        PythonScriptOperator(script, inputs={}).run(context)
+
+        outputs = context.set_task_outputs.call_args.args[0]
+        assert isinstance(outputs["pose"], ElementCollectionValue)
+        assert outputs["pose"].to_raw_object() == {"Position": {"x": 0.42, "y": -0.1, "z": 0.64}}
+        assert isinstance(outputs["dims"], ElementListValue)
+        assert outputs["dims"].to_raw_object() == [0.05, 0.05]
+
+    def test_all_script_outputs_passed_but_only_targets_recorded(self):
+        # script가 outputs dict에 넣은 값은 모두 후속 task에 전달되고, 저장 위치가 지정된 값만 기록된다.
+        out_ref = MagicMock(spec=ElementReference)
+        context = MagicMock()
+        PythonScriptOperator("outputs['answer'] = 42\noutputs['extra'] = 'x'",
+                             inputs={}, outputs={"answer": out_ref}).run(context)
+
+        out_ref.update_value.assert_called_once_with(mdt_value(42))
+        context.set_task_outputs.assert_called_once_with({"answer": mdt_value(42), "extra": mdt_value("x")})
+
+    def test_none_target_has_no_effect(self):
+        # 저장 위치가 None인 항목은 이전 버전 호환을 위해 허용되며 아무 효과가 없다.
+        context = MagicMock()
+        PythonScriptOperator("outputs['answer'] = 42",
+                             inputs={}, outputs={"answer": None}).run(context)
+
+        context.set_task_outputs.assert_called_once_with({"answer": mdt_value(42)})
+
+    def test_missing_target_output_skipped(self):
+        # 저장 위치가 지정됐더라도 script가 그 값을 넣지 않았으면 기록하지 않는다.
+        out_ref = MagicMock(spec=ElementReference)
+        context = MagicMock()
+        PythonScriptOperator("answer = 42",   # 변수 대입만으로는 출력되지 않는다.
+                             inputs={}, outputs={"answer": out_ref}).run(context)
+
+        out_ref.update_value.assert_not_called()
+        context.set_task_outputs.assert_called_once_with({})
+
+    def test_conversion_failure_records_nothing(self):
+        # 모든 출력이 전달 대상이므로, 저장 위치가 없는 출력의 변환이 실패해도 앞쪽 출력은 기록되지 않는다.
+        first_ref = MagicMock(spec=ElementReference)
+        context = MagicMock()
+        # list/dict는 변환되므로(test_dict_and_list_outputs_converted) 변환할 수 없는 값으로 object()를 쓴다.
+        op = PythonScriptOperator("outputs['first'] = 1\noutputs['second'] = object()",
+                                  inputs={}, outputs={"first": first_ref})
+        with pytest.raises(ValueError, match="unsupported property value type"):
+            op.run(context)
+
+        first_ref.update_value.assert_not_called()
+        context.set_task_outputs.assert_not_called()
+
+
+class TestRestfulAsyncRpcOperator:
+    # 'mdtpy.airflow.operator.restful_async_rpc...' 문자열 경로로 patch하면, mdtpy.airflow의
+    # star import가 'operator' 속성을 operator.py 모듈로 덮어써서 해석에 실패한다. 모듈 객체를 직접 patch한다.
+    @staticmethod
+    def _patch_client():
+        return patch.object(restful_async_rpc_module, "RESTfulAsyncRpcClient")
+
+    def test_client_receives_resolved_inputs(self):
+        context = MagicMock()
+        with self._patch_client() as m_client:
+            m_client.return_value.call.return_value = {}
+            RestfulAsyncRpcOperator("http://op-server", "/ops/sim",
+                                    inputs={"A": literal(1)}).run(context)
+
+        m_client.assert_called_once_with(base_url="http://op-server", op_endpoint="/ops/sim",
+                                         inputs={"A": mdt_value(1)})
+
+    def test_raw_result_converted_for_record_and_task_output(self):
+        out_ref = MagicMock(spec=ElementReference)
+        context = MagicMock()
+        with self._patch_client() as m_client:
+            m_client.return_value.call.return_value = {"B": 2}
+            RestfulAsyncRpcOperator("http://op-server", "/ops/sim",
+                                    inputs={}, outputs={"B": out_ref}).run(context)
+
+        out_ref.update_value.assert_called_once_with(mdt_value(2))
+        context.set_task_outputs.assert_called_once_with({"B": mdt_value(2)})
+
+    def test_undeclared_results_still_passed(self):
+        # 이 operator는 연산이 반환한 모든 결과를 후속 task에 전달한다. 기록은 선언된 출력만 한다.
+        out_ref = MagicMock(spec=ElementReference)
+        context = MagicMock()
+        with self._patch_client() as m_client:
+            m_client.return_value.call.return_value = {"B": mdt_value(2), "C": mdt_value(3)}
+            RestfulAsyncRpcOperator("http://op-server", "/ops/sim",
+                                    inputs={}, outputs={"B": out_ref}).run(context)
+
+        out_ref.update_value.assert_called_once_with(mdt_value(2))
+        context.set_task_outputs.assert_called_once_with({"B": mdt_value(2), "C": mdt_value(3)})
+
+    def test_conversion_failure_records_nothing(self):
+        # 뒤쪽 결과의 변환이 실패하면 앞쪽 결과도 기록되지 않는다.
+        first_ref = MagicMock(spec=ElementReference)
+        second_ref = MagicMock(spec=ElementReference)
+        context = MagicMock()
+        op = RestfulAsyncRpcOperator("http://op-server", "/ops/sim", inputs={},
+                                     outputs={"first": first_ref, "second": second_ref})
+        with self._patch_client() as m_client:
+            m_client.return_value.call.return_value = {"first": 1, "second": [1, 2]}
+            with pytest.raises(ValueError, match="unsupported property value type"):
+                op.run(context)
+
+        first_ref.update_value.assert_not_called()
+        second_ref.update_value.assert_not_called()
+        context.set_task_outputs.assert_not_called()
