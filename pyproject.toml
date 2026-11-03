@@ -41,6 +41,7 @@ exclude = ["samples*"]
 
 [dependency-groups]
 dev = [
+    "paho-mqtt>=2.1.0",
     "pytest>=8.0",
 ]
 
