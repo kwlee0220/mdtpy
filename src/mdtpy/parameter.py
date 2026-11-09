@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Iterable, Optional, Mapping, Iterator
 
 from .descriptor import MDTParameterDescriptor
-from .exceptions import MDTException
+from .exceptions import MDTException, ResourceNotFoundError
 from .ref import BaseElementReference
 
 
@@ -89,5 +89,42 @@ class MDTParameterCollection(Mapping[str, MDTParameter]):
           param_id (str): 파라미터 식별자.
         Returns:
           MDTParameter: 파라미터 객체.
+        Raises:
+          ResourceNotFoundError: 해당 식별자의 파라미터가 없는 경우. 메시지에 사용 가능한
+            파라미터 식별자 목록을 담는다.
         """
-        return self.__param_dict[param_id]
+        param = self.__param_dict.get(param_id)
+        if param is None:
+            raise ResourceNotFoundError.create(
+                "MDTParameter", f"id={param_id}, available={list(self.__param_dict)}"
+            )
+        return param
+
+    def __contains__(self, param_id: object) -> bool:
+        """
+        주어진 식별자의 파라미터 존재 여부를 반환한다.
+
+        `__getitem__` 이 `KeyError` 가 아니라 `ResourceNotFoundError` 를 내므로
+        `Mapping` 의 기본 구현 대신 직접 구현한다.
+
+        Args:
+          param_id (object): 파라미터 식별자.
+        Returns:
+          bool: 존재하면 True.
+        """
+        return param_id in self.__param_dict
+
+    def get(self, param_id: str, default: Optional[MDTParameter] = None) -> Optional[MDTParameter]:  # type: ignore[override]
+        """
+        주어진 식별자의 파라미터를 반환하고, 없으면 `default` 를 반환한다.
+
+        `__getitem__` 이 `KeyError` 가 아니라 `ResourceNotFoundError` 를 내므로
+        `Mapping` 의 기본 구현 대신 직접 구현한다.
+
+        Args:
+          param_id (str): 파라미터 식별자.
+          default (Optional[MDTParameter]): 파라미터가 없을 때 반환할 값.
+        Returns:
+          Optional[MDTParameter]: 파라미터 객체 또는 `default`.
+        """
+        return self.__param_dict.get(param_id, default)

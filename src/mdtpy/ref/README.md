@@ -29,6 +29,7 @@ ref.write(sme)
 # File 요소 첨부 파일 (대상 인스턴스가 실행 중이어야 한다)
 ref.put_attachment("/path/to/image.jpg")
 data = ref.get_attachment()
+data = ref.get_attachment(max_bytes=5_000_000)   # 상한을 넘으면 다 받기 전에 멈추고 FileTooLargeError
 ```
 
 ## 구성

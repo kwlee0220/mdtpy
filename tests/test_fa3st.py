@@ -24,6 +24,10 @@ from mdtpy.exceptions import (
     MDTInstanceConnectionError,
     RemoteError,
     ResourceNotFoundError,
+    TimeoutError as MDTTimeoutError,
+    FileTooLargeError,
+    ConnectionLostError,
+    ResultUnknownError,
 )
 from mdtpy.fa3st import (
     DEFAULT_TIMEOUT,
@@ -35,6 +39,7 @@ from mdtpy.fa3st import (
     call_get_file,
     call_patch,
     call_post,
+    call_post_for_location,
     call_put,
     call_put_file,
     decode_base64url,
@@ -226,6 +231,59 @@ class TestCallPut:
 
 
 class TestCallGetFile:
+    @staticmethod
+    def _streaming_response(chunks, content_length=None, status_code=200):
+        resp = make_response(status_code=status_code, content_type="application/zip")
+        if content_length is not None:
+            resp.headers["Content-Length"] = str(content_length)
+        resp.iter_content.return_value = iter(chunks)
+        return resp
+
+    @patch("mdtpy.fa3st.requests.get")
+    def test_max_bytes_streams_and_returns_small_file(self, mock_get):
+        mock_get.return_value = self._streaming_response([b"ab", b"cd"], content_length=4)
+        assert call_get_file("http://x/a", max_bytes=4) == ("application/zip", b"abcd")
+        assert mock_get.call_args.kwargs["stream"] is True
+        mock_get.return_value.close.assert_called_once()
+
+    @patch("mdtpy.fa3st.requests.get")
+    def test_max_bytes_rejects_by_content_length_without_reading(self, mock_get):
+        resp = self._streaming_response([b"x" * 10], content_length=10)
+        mock_get.return_value = resp
+        with pytest.raises(FileTooLargeError) as info:
+            call_get_file("http://x/a", max_bytes=4)
+        assert info.value.size == 10 and info.value.limit == 4
+        resp.iter_content.assert_not_called()
+        resp.close.assert_called_once()
+
+    @patch("mdtpy.fa3st.requests.get")
+    def test_max_bytes_stops_reading_without_content_length(self, mock_get):
+        consumed = []
+        def chunks():
+            for c in [b"ab", b"cd", b"ef", b"gh"]:
+                consumed.append(c)
+                yield c
+        resp = self._streaming_response([])
+        resp.iter_content.return_value = chunks()
+        mock_get.return_value = resp
+        with pytest.raises(FileTooLargeError) as info:
+            call_get_file("http://x/a", max_bytes=3)
+        assert info.value.size is None
+        assert consumed == [b"ab", b"cd"]       # 상한을 넘는 순간 멈춘다
+        resp.close.assert_called_once()
+
+    @patch("mdtpy.fa3st.requests.get")
+    def test_max_bytes_still_raises_on_error_response(self, mock_get):
+        mock_get.return_value = make_response(status_code=404, json_data={"messages": [{"text": "missing"}]})
+        with pytest.raises(MDTException):
+            call_get_file("http://x/a", max_bytes=4)
+
+    @patch("mdtpy.fa3st.requests.get")
+    def test_without_max_bytes_does_not_stream(self, mock_get):
+        mock_get.return_value = make_response(status_code=200, content=b"abc", content_type="text/plain")
+        assert call_get_file("http://x/a") == ("text/plain", b"abc")
+        assert mock_get.call_args.kwargs["stream"] is False
+
     @patch("mdtpy.fa3st.requests.get")
     def test_returns_content_type_and_bytes(self, mock_get):
         mock_get.return_value = make_response(
@@ -286,7 +344,56 @@ class TestCallPutFile:
             call_put_file("http://x/attachment", {"content": ("a.txt", b"d", "text/plain")})
 
 
+class TestCallPostForLocation:
+    @patch("mdtpy.fa3st.requests.request")
+    def test_resolves_relative_location_against_request_url(self, mock_request):
+        resp = make_response(status_code=202)
+        resp.headers["Location"] = "operation-status/aDE="
+        mock_request.return_value = resp
+        url = "http://srv/sm/submodel-elements/Op/invoke-async"
+        assert call_post_for_location(url, data="{}") == "http://srv/sm/submodel-elements/Op/operation-status/aDE="
+        args, kwargs = mock_request.call_args
+        assert args[0] == "POST" and kwargs["headers"] == JSON_HEADERS
+
+    @patch("mdtpy.fa3st.requests.request")
+    def test_missing_location_raises(self, mock_request):
+        mock_request.return_value = make_response(status_code=202)
+        with pytest.raises(MDTException, match="No Location header"):
+            call_post_for_location("http://x", data="{}")
+
+    @patch("mdtpy.fa3st.requests.request")
+    def test_error_response_raises(self, mock_request):
+        mock_request.return_value = make_response(status_code=400, json_data={"messages": [{"text": "bad"}]})
+        with pytest.raises(MDTException):
+            call_post_for_location("http://x", data="{}")
+
+
 class TestCallPost:
+    @patch("mdtpy.fa3st.requests.request")
+    def test_passes_explicit_timeout(self, mock_request):
+        mock_request.return_value = make_response(status_code=200, text="ok")
+        call_post("http://x", data="{}", timeout=(3.0, 99.0))
+        assert mock_request.call_args.kwargs["timeout"] == (3.0, 99.0)
+
+    @patch("mdtpy.fa3st.requests.request")
+    def test_default_timeout(self, mock_request):
+        mock_request.return_value = make_response(status_code=200, text="ok")
+        call_post("http://x", data="{}")
+        assert mock_request.call_args.kwargs["timeout"] == DEFAULT_TIMEOUT
+
+    @patch("mdtpy.fa3st.requests.request")
+    def test_read_timeout_becomes_mdt_timeout_error(self, mock_request):
+        """응답 대기 시간 초과는 연결 실패와 구분되는 mdtpy.TimeoutError 로 바뀐다."""
+        mock_request.side_effect = requests.exceptions.ReadTimeout("slow")
+        with pytest.raises(MDTTimeoutError, match="may still be in progress"):
+            call_post("http://x", data="{}")
+
+    @patch("mdtpy.fa3st.requests.request")
+    def test_connect_timeout_is_connection_error(self, mock_request):
+        mock_request.side_effect = requests.exceptions.ConnectTimeout("no route")
+        with pytest.raises(MDTInstanceConnectionError):
+            call_post("http://x", data="{}")
+
     @patch("mdtpy.fa3st.requests.request")
     def test_sets_json_content_type_header_and_post_method(self, mock_request):
         mock_request.return_value = make_response(status_code=200, text="ok")
@@ -453,3 +560,73 @@ class TestToException:
         exc = to_exception(resp)
         assert isinstance(exc, RemoteError)
         assert "raw body" in str(exc)
+
+
+# --------------------------------------------------------------------------- #
+# 연결 오류 분류: 요청이 서버에 닿지 않음 vs 보낸 뒤 끊김(결과 확인 불가)
+# --------------------------------------------------------------------------- #
+
+class TestConnectionErrorClassification:
+    @staticmethod
+    def _refused():
+        import urllib3
+        reason = urllib3.exceptions.NewConnectionError(None, "Connection refused")
+        return requests.exceptions.ConnectionError(urllib3.exceptions.MaxRetryError(None, "/x", reason=reason))
+
+    @staticmethod
+    def _lost():
+        import urllib3
+        return requests.exceptions.ConnectionError(urllib3.exceptions.ProtocolError("Connection aborted."))
+
+    @patch("mdtpy.fa3st.requests.request")
+    def test_connect_failure_is_not_result_unknown(self, mock_request):
+        mock_request.side_effect = self._refused()
+        with pytest.raises(MDTInstanceConnectionError) as info:
+            call_post("http://x", data="{}")
+        assert not isinstance(info.value, ResultUnknownError)
+
+    @patch("mdtpy.fa3st.requests.request")
+    def test_connect_timeout_is_not_result_unknown(self, mock_request):
+        mock_request.side_effect = requests.exceptions.ConnectTimeout("slow connect")
+        with pytest.raises(MDTInstanceConnectionError) as info:
+            call_post("http://x", data="{}")
+        assert not isinstance(info.value, ResultUnknownError)
+
+    @patch("mdtpy.fa3st.requests.request")
+    def test_lost_after_send_is_result_unknown_and_still_connection_error(self, mock_request):
+        mock_request.side_effect = self._lost()
+        with pytest.raises(ConnectionLostError) as info:
+            call_post("http://x", data="{}")
+        assert isinstance(info.value, ResultUnknownError)
+        assert isinstance(info.value, MDTInstanceConnectionError)     # 기존 except 절과 호환
+
+    def test_response_timeout_is_result_unknown(self):
+        assert issubclass(MDTTimeoutError, ResultUnknownError)
+
+    def test_real_socket_closed_after_request_is_connection_lost(self):
+        """실제 소켓: 요청을 받은 뒤 응답 없이 끊는 서버."""
+        import socket
+        import threading
+        server = socket.socket()
+        server.bind(("127.0.0.1", 0))
+        server.listen(1)
+        def serve():
+            conn, _ = server.accept()
+            conn.recv(65536)
+            conn.close()
+        threading.Thread(target=serve, daemon=True).start()
+        try:
+            with pytest.raises(ConnectionLostError):
+                call_post(f"http://127.0.0.1:{server.getsockname()[1]}/x", data="{}", timeout=5)
+        finally:
+            server.close()
+
+    def test_real_refused_connection_is_plain_connection_error(self):
+        import socket
+        sock = socket.socket()
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+        sock.close()                                   # 아무도 듣지 않는 포트
+        with pytest.raises(MDTInstanceConnectionError) as info:
+            call_post(f"http://127.0.0.1:{port}/x", data="{}", timeout=5)
+        assert not isinstance(info.value, ResultUnknownError)

@@ -649,17 +649,20 @@ class MDTInstance:
         return SubmodelServiceCollection[TimeSeriesService](self, ts_sm_desc_dict)
 
 
-    def start(self, nowait=False) -> InstanceDescriptor:
+    def start(self, nowait: bool = False, timeout: Optional[float] = None) -> InstanceDescriptor:
         """
         MDTInstance를 시작시킨다.
 
         Args:
             nowait: True인 경우, MDTInstance가 시작될 때까지 대기하지 않는다.
+            timeout: 시작될 때까지 기다리는 최대 시간(초). None이면 제한 없이 기다린다.
+                nowait가 True이면 쓰이지 않는다.
         Returns:
             InstanceDescriptor: MDTInstance의 등록정보.
         Raises:
             InvalidResourceStateError: MDTInstance의 상태를 STARTING 또는 RUNNING으로
                             변경할 수 없는 경우.
+            TimeoutError: timeout 안에 상태 전이가 끝나지 않은 경우 (``builtins.TimeoutError``).
         """
         url = f"{self.__instance_url}/start"
         resp = _put(url, data="")
@@ -673,7 +676,8 @@ class MDTInstance:
                 "MDTInstance", f"id={self.id}", self.__descriptor.status
             )
         if not nowait:
-            poller = InstanceStartPoller(f"{self.__instance_url}", init_desc=self.__descriptor)
+            poller = InstanceStartPoller(f"{self.__instance_url}", init_desc=self.__descriptor,
+                                         timeout=timeout)
             poller.wait_for_done()
             self.__descriptor = poller.desc
             if self.__descriptor.status != MDTInstanceStatus.RUNNING:
@@ -684,17 +688,20 @@ class MDTInstance:
         return self.descriptor
     
 
-    def stop(self, nowait=False) -> InstanceDescriptor:
+    def stop(self, nowait: bool = False, timeout: Optional[float] = None) -> InstanceDescriptor:
         """
         MDTInstance를 중지시킨다.
 
         Args:
             nowait: True인 경우, MDTInstance가 중지될 때까지 대기하지 않는다.
+            timeout: 중지될 때까지 기다리는 최대 시간(초). None이면 제한 없이 기다린다.
+                nowait가 True이면 쓰이지 않는다.
         Returns:
             InstanceDescriptor: MDTInstance의 등록정보.
         Raises:
             InvalidResourceStateError: MDTInstance의 상태를 STOPPING 또는 STOPPED로 변경할
                             수 없는 경우.
+            TimeoutError: timeout 안에 상태 전이가 끝나지 않은 경우 (``builtins.TimeoutError``).
         """
         url = f"{self.__instance_url}/stop"
         resp = _put(url, data="")
@@ -710,7 +717,8 @@ class MDTInstance:
 
         # nowait가 False인 경우, STOPPED 상태가 될 때까지 대기한다.
         if not nowait:
-            poller = InstanceStopPoller(f"{self.__instance_url}", init_desc=self.__descriptor)
+            poller = InstanceStopPoller(f"{self.__instance_url}", init_desc=self.__descriptor,
+                                        timeout=timeout)
             poller.wait_for_done()
             self.__descriptor = poller.desc
             if self.__descriptor.status != MDTInstanceStatus.STOPPED:
@@ -800,7 +808,10 @@ class StatusPoller(ABC):
                 raise TimeoutError(f'timeout={self.timeout}')
             
             # 다음 폴링 시간까지 남은 시간이 짧으면 대기하지 않고 바로 다음 폴링 시도한다.
+            # 타임아웃이 다음 폴링 시간보다 먼저 오면 타임아웃 시각까지만 대기한다.
             sleep_time = next_wakeup - now
+            if due:
+                sleep_time = min(sleep_time, due - now)
             if sleep_time > 0.001:
                 time.sleep(sleep_time)
             # is_done() 한 번 수행에 poll_interval 이상이 소요된 경우 next_wakeup이

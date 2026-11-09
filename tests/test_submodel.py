@@ -22,6 +22,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mdtpy import fa3st
+
 from basyx.aas import model
 
 import mdtpy.instance as instance_mod
@@ -209,24 +211,37 @@ class TestSubmodelServiceInvocations:
         assert mock_post.call_args.kwargs["deserializer"] == OperationResult.from_json
 
     @patch("mdtpy.submodel.fa3st.call_post")
-    def test_invoke_operation_async_uses_async_query(self, mock_post):
-        mock_post.return_value = MagicMock(spec=OperationHandle)
+    def test_invoke_operation_sync_waits_longer_than_operation_timeout(self, mock_post):
+        """서버는 연산이 끝난 뒤 응답하므로 HTTP 응답 대기 제한이 연산 제한보다 길어야 한다."""
+        mock_post.return_value = MagicMock(spec=OperationResult)
         svc = SubmodelService("i", make_sm_desc(endpoint="http://srv/sm"))
-        svc.invoke_operation_async(
-            "MyOp", [], [], timeout=datetime.timedelta(seconds=1)
-        )
-        called_url = mock_post.call_args[0][0]
-        assert called_url == "http://srv/sm/submodel-elements/MyOp/invoke?async=true"
-        assert mock_post.call_args.kwargs["deserializer"] == OperationHandle.from_json
+        svc.invoke_operation_sync("MyOp", [], [], timeout=datetime.timedelta(minutes=10))
+        connect, read = mock_post.call_args.kwargs["timeout"]
+        assert connect == fa3st.DEFAULT_TIMEOUT and read > 600
 
+    @patch("mdtpy.submodel.fa3st.call_post_for_location")
+    def test_invoke_operation_async_posts_invoke_async_and_reads_handle_from_location(self, mock_post):
+        """FA³ST(AAS API v3)는 202 + Location: operation-status/<base64url(handleId)> 로 핸들을 알려 준다."""
+        handle_id = "op/1:2"        # base64url 로 인코딩하지 않으면 경로를 깨는 문자
+        mock_post.return_value = ("http://srv/sm/submodel-elements/MyOp/operation-status/"
+                                  + fa3st.encode_base64url(handle_id))
+        svc = SubmodelService("i", make_sm_desc(endpoint="http://srv/sm"))
+        handle = svc.invoke_operation_async("MyOp", [], [], timeout=datetime.timedelta(seconds=1))
+        assert mock_post.call_args[0][0] == "http://srv/sm/submodel-elements/MyOp/invoke-async"
+        assert handle == OperationHandle(handle_id=handle_id)
+
+    @pytest.mark.parametrize("method, segment", [
+        ("get_operation_async_status", "operation-status"),
+        ("get_operation_async_result", "operation-results"),
+    ])
     @patch("mdtpy.submodel.fa3st.call_get")
-    def test_get_operation_async_result_uses_handle_id_in_path(self, mock_get):
+    def test_async_queries_use_base64url_handle(self, mock_get, method, segment):
         mock_get.return_value = MagicMock(spec=OperationResult)
         svc = SubmodelService("i", make_sm_desc(endpoint="http://srv/sm"))
-        handle = OperationHandle(handle_id="h-42")
-        svc.get_operation_async_result("MyOp", handle)
+        getattr(svc, method)("MyOp", OperationHandle(handle_id="op/1:2"))
         called_url = mock_get.call_args[0][0]
-        assert called_url == "http://srv/sm/submodel-elements/MyOp/operation-results/h-42"
+        assert called_url == (f"http://srv/sm/submodel-elements/MyOp/{segment}/"
+                              + fa3st.encode_base64url("op/1:2"))
         assert mock_get.call_args.kwargs["deserializer"] == OperationResult.from_json
 
 
@@ -331,6 +346,15 @@ class TestSubmodelServiceCollection:
         coll = SubmodelServiceCollection(make_instance_mock(), sm_descs)
         assert "Data" in coll
         assert "Other" not in coll
+
+    def test_get_returns_default_for_unknown_id_short(self):
+        """`__getitem__` 이 KeyError 가 아닌 ResourceNotFoundError 를 내도 `get` 은 기본값을 돌려줘야 한다."""
+        sm_descs = {"Data": make_sm_desc(id_short="Data")}
+        coll = SubmodelServiceCollection(make_instance_mock(), sm_descs)
+        assert coll.get("Data") is coll["Data"]
+        assert coll.get("Other") is None
+        sentinel = object()
+        assert coll.get("Other", sentinel) is sentinel
 
     def test_get_by_id_returns_matching_service(self):
         sm_descs = {
@@ -438,6 +462,22 @@ class TestSubmodelElementCollection:
             assert coll["x.y"] == "the-element"
             m_er.assert_called_once_with("x.y")
 
+    def test_get_returns_default_when_element_not_found(self):
+        """서버가 404(ResourceNotFoundError)를 주면 `get` 은 기본값을 돌려줘야 한다."""
+        coll, _ = self._make_coll()
+        ref = MagicMock()
+        ref.read.side_effect = ResourceNotFoundError("no such element")
+        with patch.object(coll, "element_reference", return_value=ref):
+            assert coll.get("missing") is None
+            assert coll.get("missing", "dflt") == "dflt"
+
+    def test_get_returns_element_when_found(self):
+        coll, _ = self._make_coll()
+        ref = MagicMock()
+        ref.read.return_value = "the-element"
+        with patch.object(coll, "element_reference", return_value=ref):
+            assert coll.get("x") == "the-element"
+
     # __setitem__ --------------------------------------------------------- #
 
     def test_setitem_writes_when_path_exists(self):
@@ -519,4 +559,6 @@ class TestSubmodelElementCollection:
         ref.get_attachment.return_value = b"bytes"
         with patch.object(coll, "element_reference", return_value=ref):
             assert coll.get_attachment("x") == b"bytes"
-        ref.get_attachment.assert_called_once()
+            assert coll.get_attachment("x", max_bytes=10) == b"bytes"
+        assert ref.get_attachment.call_args_list[0].kwargs == {"max_bytes": None}
+        assert ref.get_attachment.call_args_list[1].kwargs == {"max_bytes": 10}

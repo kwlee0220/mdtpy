@@ -133,6 +133,12 @@ class TestOperationVariable:
 # --------------------------------------------------------------------------- #
 
 class TestOperationResult:
+    def test_from_dict_status_response_without_success(self):
+        """비동기 연산의 상태 응답(실행 중)에는 success 가 없을 수 있다."""
+        r = OperationResult.from_dict({ "executionState": "Running" })
+        assert r.execution_state == "Running" and r.success is False
+        assert r.output_op_variables is None
+
     def test_from_dict_minimal_success_response(self):
         """필수 필드만 있는 성공 응답 (output/inoutput 인자 없음)."""
         r = OperationResult.from_dict({
@@ -193,14 +199,6 @@ class TestOperationResult:
 # --------------------------------------------------------------------------- #
 
 class TestOperationHandle:
-    def test_from_json_maps_handleId_camelcase(self):
-        h = OperationHandle.from_json('{"handleId": "abc-123"}')
-        assert h.handle_id == "abc-123"
-
-    def test_from_json_missing_key_raises(self):
-        with pytest.raises(KeyError):
-            OperationHandle.from_json('{"other": "x"}')
-
     def test_construction_directly(self):
         h = OperationHandle(handle_id="zzz")
         assert h.handle_id == "zzz"

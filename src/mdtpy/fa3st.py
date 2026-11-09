@@ -5,13 +5,19 @@ from typing import Optional, TypeVar
 from dataclasses import dataclass
 
 import base64
+from urllib.parse import urljoin
+
 import requests
+import urllib3
 
 from dataclass_wizard import JSONWizard
 
 from .exceptions import (
     MDTException,
     MDTInstanceConnectionError,
+    ConnectionLostError,
+    FileTooLargeError,
+    TimeoutError as MDTTimeoutError,
 )
 from .http_client import to_exception as _to_exception_common
 
@@ -20,6 +26,40 @@ T = TypeVar('T')
 
 # 모든 HTTP 호출의 기본 타임아웃(초). 명시적 timeout이 주어지지 않았을 때 사용한다.
 DEFAULT_TIMEOUT: float = 30.0
+
+# requests 의 timeout 인자: 초 하나, 또는 (연결 제한, 응답 대기 제한) 튜플.
+Timeout = float | tuple[float, float]
+
+
+def _connection_error(url: str, cause: requests.exceptions.ConnectionError) -> MDTInstanceConnectionError:
+    """연결 오류를 요청이 서버에 닿았는지에 따라 나눈다.
+
+    연결 자체에 실패했으면(연결 거부, 이름 해석 실패, 연결 시간 초과, TLS 실패) 요청이 서버에 닿지 않은
+    것이므로 `MDTInstanceConnectionError` 를 돌려준다. 연결된 뒤 응답을 받다가 끊겼으면 요청이 처리됐을 수
+    있으므로 `ConnectionLostError`(결과 확인 불가)를 돌려준다. 판단할 수 없는 경우도 보수적으로 뒤쪽으로 본다.
+    """
+    reason = cause.args[0] if cause.args else None
+    if isinstance(reason, urllib3.exceptions.MaxRetryError):
+        reason = reason.reason
+    not_sent = (isinstance(cause, (requests.exceptions.ConnectTimeout, requests.exceptions.SSLError))
+                or isinstance(reason, (urllib3.exceptions.NewConnectionError,
+                                       urllib3.exceptions.ConnectTimeoutError)))
+    if not_sent:
+        return MDTInstanceConnectionError(f"Failed to connect to {url}", cause)
+    return ConnectionLostError(f"Connection to {url} was lost after the request was sent; "
+                               f"the request may have been processed", cause)
+
+
+def _response_timeout(url: str, timeout: Timeout, cause: Exception) -> MDTTimeoutError:
+    """요청은 보냈으나 제한 시간 안에 응답을 받지 못한 경우의 예외를 만든다.
+
+    연결 실패와 달리 서버가 요청을 받아 처리 중이거나 이미 처리했을 수 있으므로,
+    그 요청의 결과를 알 수 없다는 뜻으로 쓴다.
+    """
+    error = MDTTimeoutError(f"No response from {url} within timeout={timeout}; "
+                            f"the request may still be in progress on the server")
+    error.__cause__ = cause
+    return error
 
 # 사내 self-signed 인증서를 쓰는 환경 호환을 위해 SSL 검증을 끈다.
 # 외부 네트워크 호출에서는 True로 변경할 것을 권장.
@@ -150,13 +190,14 @@ def _request(
     data: Optional[str] = None,
     headers: Optional[dict[str, str]] = None,
     deserializer: Optional[Callable[[str], T]] = None,
+    timeout: Timeout = DEFAULT_TIMEOUT,
 ) -> Optional[T | str]:
     """
     공통 HTTP 호출 헬퍼.
 
     `requests.request(method, url, ...)`로 단일 요청을 보내고, 2xx 응답
-    본문을 (선택적으로 deserialize하여) 반환한다. `verify`/`timeout`은
-    모듈-수준 상수(`VERIFY_TLS`, `DEFAULT_TIMEOUT`)로 일괄 적용된다.
+    본문을 (선택적으로 deserialize하여) 반환한다. `verify`는 모듈-수준 상수
+    `VERIFY_TLS`로 적용되고, `timeout`은 주지 않으면 `DEFAULT_TIMEOUT`이다.
 
     Args:
         method (str): HTTP 메서드 ("GET"/"PUT"/"POST"/"PATCH"/"DELETE").
@@ -168,7 +209,9 @@ def _request(
     Returns:
         Optional[T | str]: deserialize된 객체, 응답 텍스트, 또는 None(204).
     Raises:
-        MDTInstanceConnectionError: 연결 실패 시.
+        MDTInstanceConnectionError: 연결 실패 시. 요청을 보낸 뒤 연결이 끊긴 경우는 그 하위 타입인
+            ConnectionLostError(결과 확인 불가)다.
+        TimeoutError: 요청은 보냈으나 timeout 안에 응답을 받지 못한 경우 (mdtpy.TimeoutError).
         MDTException: 비-2xx 응답에서 발생하는 서버 측 오류.
     """
     try:
@@ -177,10 +220,12 @@ def _request(
             data=data,
             headers=headers,
             verify=VERIFY_TLS,
-            timeout=DEFAULT_TIMEOUT,
+            timeout=timeout,
         )
     except requests.exceptions.ConnectionError as e:
-        raise MDTInstanceConnectionError(f"Failed to connect to {url}", e)
+        raise _connection_error(url, e)
+    except requests.exceptions.Timeout as e:
+        raise _response_timeout(url, timeout, e)
     resp_text = read_response(resp)
     return deserializer(resp_text) if deserializer and resp_text else resp_text
 
@@ -200,7 +245,8 @@ def call_get(
     Returns:
         Optional[T | str]: deserialize된 객체, 응답 텍스트, 또는 None(204).
     Raises:
-        MDTInstanceConnectionError: 연결 실패 시.
+        MDTInstanceConnectionError: 연결 실패 시. 요청을 보낸 뒤 연결이 끊긴 경우는 그 하위 타입인
+            ConnectionLostError(결과 확인 불가)다.
         MDTException: 비-2xx 응답에서 발생하는 서버 측 오류.
     """
     return _request("GET", url, deserializer=deserializer)
@@ -222,15 +268,21 @@ def call_put(
     Returns:
         Optional[T | str]: deserialize된 객체, 응답 텍스트, 또는 None(204).
     Raises:
-        MDTInstanceConnectionError: 연결 실패 시.
+        MDTInstanceConnectionError: 연결 실패 시. 요청을 보낸 뒤 연결이 끊긴 경우는 그 하위 타입인
+            ConnectionLostError(결과 확인 불가)다.
         MDTException: 비-2xx 응답에서 발생하는 서버 측 오류.
     """
     return _request("PUT", url, data=data, deserializer=deserializer)
 
 
+# max_bytes 를 줄 때 응답 본문을 나눠 읽는 단위(바이트).
+_FILE_CHUNK_SIZE = 64 * 1024
+
+
 def call_get_file(
     url: str,
     timeout: float = DEFAULT_TIMEOUT,
+    max_bytes: Optional[int] = None,
 ) -> Optional[tuple[str, bytes]]:
     """
     바이너리/파일 응답을 받는 GET 요청을 보낸다. 첨부파일 다운로드에 사용한다.
@@ -238,20 +290,48 @@ def call_get_file(
     `call_get`(텍스트 본문)과 달리 응답을 `(Content-Type, bytes)` 튜플로 반환한다.
     `verify`는 모듈 상수(`VERIFY_TLS`)로 적용된다.
 
+    `max_bytes` 를 주면 본문을 한꺼번에 받지 않고 나눠 읽는다. 응답 헤더의 Content-Length 가 상한을
+    넘으면 본문을 읽지 않고, Content-Length 가 없으면 상한을 넘는 순간 읽기를 멈춘다. 어느 경우든
+    `FileTooLargeError` 를 내며, 파일 전체를 메모리에 올리지 않는다.
+
     Args:
         url (str): 요청할 URL.
         timeout (float): 요청 타임아웃(초).
+        max_bytes (Optional[int]): 내려받을 파일의 최대 크기(바이트). None 이면 제한하지 않는다.
     Returns:
         Optional[tuple[str, bytes]]: (Content-Type, 본문 바이트), 또는 None(204).
     Raises:
-        MDTInstanceConnectionError: 연결 실패 시.
+        FileTooLargeError: `max_bytes` 를 넘는 파일인 경우.
+        MDTInstanceConnectionError: 연결 실패 시. 요청을 보낸 뒤 연결이 끊긴 경우는 그 하위 타입인
+            ConnectionLostError(결과 확인 불가)다.
         MDTException: 비-2xx 응답에서 발생하는 서버 측 오류.
     """
     try:
-        resp = requests.get(url, verify=VERIFY_TLS, timeout=timeout)
+        resp = requests.get(url, verify=VERIFY_TLS, timeout=timeout, stream=max_bytes is not None)
     except requests.exceptions.ConnectionError as e:
-        raise MDTInstanceConnectionError(f"Failed to connect to {url}", e)
-    return read_file_response(resp)
+        raise _connection_error(url, e)
+    except requests.exceptions.Timeout as e:
+        raise _response_timeout(url, timeout, e)
+    if max_bytes is None:
+        return read_file_response(resp)
+
+    try:
+        if resp.status_code == 204 or not (200 <= resp.status_code < 300):
+            return read_file_response(resp)     # 204 는 None, 오류 응답은 예외 (본문이 작다)
+        content_type = resp.headers['Content-Type']
+        length = resp.headers.get('Content-Length')
+        if length is not None and length.isdigit() and int(length) > max_bytes:
+            raise FileTooLargeError(url, int(length), max_bytes, content_type)
+
+        body = bytearray()
+        for chunk in resp.iter_content(chunk_size=_FILE_CHUNK_SIZE):
+            body += chunk
+            if len(body) > max_bytes:
+                raise FileTooLargeError(url, None, max_bytes, content_type)
+        return content_type, bytes(body)
+    finally:
+        # 상한을 넘어 읽기를 멈춘 경우에도 연결을 정리한다.
+        resp.close()
 
 
 def call_put_file(
@@ -272,13 +352,16 @@ def call_put_file(
         data (Optional[dict[str, str]]): 함께 보낼 폼필드.
         timeout (float): 요청 타임아웃(초). 업로드 특성상 기본값을 크게 둔다.
     Raises:
-        MDTInstanceConnectionError: 연결 실패 시.
+        MDTInstanceConnectionError: 연결 실패 시. 요청을 보낸 뒤 연결이 끊긴 경우는 그 하위 타입인
+            ConnectionLostError(결과 확인 불가)다.
         MDTException: 비-2xx 응답에서 발생하는 서버 측 오류.
     """
     try:
         resp = requests.put(url, files=files, data=data, verify=VERIFY_TLS, timeout=timeout)
     except requests.exceptions.ConnectionError as e:
-        raise MDTInstanceConnectionError(f"Failed to connect to {url}", e)
+        raise _connection_error(url, e)
+    except requests.exceptions.Timeout as e:
+        raise _response_timeout(url, timeout, e)
     read_none_response(resp)
 
 
@@ -286,6 +369,7 @@ def call_post(
     url: str,
     data: str,
     deserializer: Optional[Callable[[str], T]] = None,
+    timeout: Timeout = DEFAULT_TIMEOUT,
 ) -> Optional[T | str]:
     """
     POST 요청(본문은 application/json)을 보내고 응답 본문을 반환한다.
@@ -295,13 +379,55 @@ def call_post(
         data (str): 요청 본문 (JSON 문자열).
         deserializer (Optional[Callable[[str], T]]): 응답 변환 함수. 빈 응답에는
             호출되지 않는다.
+        timeout (Timeout): 요청 타임아웃(초, 또는 (연결, 응답 대기) 튜플).
+            서버가 처리를 끝낸 뒤에 응답하는 요청(동기 연산 호출 등)은 처리 시간보다 길게 준다.
     Returns:
         Optional[T | str]: deserialize된 객체, 응답 텍스트, 또는 None(204).
     Raises:
-        MDTInstanceConnectionError: 연결 실패 시.
+        MDTInstanceConnectionError: 연결 실패 시. 요청을 보낸 뒤 연결이 끊긴 경우는 그 하위 타입인
+            ConnectionLostError(결과 확인 불가)다.
+        TimeoutError: 요청은 보냈으나 timeout 안에 응답을 받지 못한 경우 (mdtpy.TimeoutError).
         MDTException: 비-2xx 응답에서 발생하는 서버 측 오류.
     """
-    return _request("POST", url, data=data, headers=JSON_HEADERS, deserializer=deserializer)
+    return _request("POST", url, data=data, headers=JSON_HEADERS, deserializer=deserializer,
+                    timeout=timeout)
+
+
+def call_post_for_location(
+    url: str,
+    data: str,
+    timeout: Timeout = DEFAULT_TIMEOUT,
+) -> str:
+    """
+    POST 요청(본문은 application/json)을 보내고, 응답의 Location 헤더를 절대 URL 로 반환한다.
+
+    비동기 연산 시작(`…/invoke-async`)처럼 서버가 `202 Accepted` 와 함께 후속 조회 위치를 Location 헤더로
+    알려 주는 요청에 쓴다. 상대 경로로 온 Location 은 요청 URL 을 기준으로 절대 URL 로 바꾼다.
+
+    Args:
+        url (str): 요청할 URL.
+        data (str): 요청 본문 (JSON 문자열).
+        timeout (Timeout): 요청 타임아웃(초, 또는 (연결, 응답 대기) 튜플).
+    Returns:
+        str: Location 헤더가 가리키는 절대 URL.
+    Raises:
+        MDTInstanceConnectionError: 연결 실패 시. 요청을 보낸 뒤 연결이 끊긴 경우는 그 하위 타입인
+            ConnectionLostError(결과 확인 불가)다.
+        TimeoutError: 요청은 보냈으나 timeout 안에 응답을 받지 못한 경우 (mdtpy.TimeoutError).
+        MDTException: 비-2xx 응답이거나, 응답에 Location 헤더가 없는 경우.
+    """
+    try:
+        resp = requests.request("POST", url, data=data, headers=JSON_HEADERS, verify=VERIFY_TLS,
+                                timeout=timeout)
+    except requests.exceptions.ConnectionError as e:
+        raise _connection_error(url, e)
+    except requests.exceptions.Timeout as e:
+        raise _response_timeout(url, timeout, e)
+    read_none_response(resp)
+    location = resp.headers.get('Location')
+    if not location:
+        raise MDTException(f"No Location header in the response: url={url}, status={resp.status_code}")
+    return urljoin(url, location)
 
 
 def call_patch(
@@ -320,7 +446,8 @@ def call_patch(
     Returns:
         Optional[T | str]: deserialize된 객체, 응답 텍스트, 또는 None(204).
     Raises:
-        MDTInstanceConnectionError: 연결 실패 시.
+        MDTInstanceConnectionError: 연결 실패 시. 요청을 보낸 뒤 연결이 끊긴 경우는 그 하위 타입인
+            ConnectionLostError(결과 확인 불가)다.
         MDTException: 비-2xx 응답에서 발생하는 서버 측 오류.
     """
     return _request("PATCH", url, data=json_str, headers=JSON_HEADERS, deserializer=deserializer)
@@ -333,13 +460,16 @@ def call_delete(url: str) -> None:
     Args:
         url (str): 요청할 URL.
     Raises:
-        MDTInstanceConnectionError: 연결 실패 시.
+        MDTInstanceConnectionError: 연결 실패 시. 요청을 보낸 뒤 연결이 끊긴 경우는 그 하위 타입인
+            ConnectionLostError(결과 확인 불가)다.
         MDTException: 비-2xx 응답에서 발생하는 서버 측 오류.
     """
     try:
         resp = requests.delete(url, verify=VERIFY_TLS, timeout=DEFAULT_TIMEOUT)
     except requests.exceptions.ConnectionError as e:
-        raise MDTInstanceConnectionError(f"Failed to connect to {url}", e)
+        raise _connection_error(url, e)
+    except requests.exceptions.Timeout as e:
+        raise _response_timeout(url, DEFAULT_TIMEOUT, e)
     read_none_response(resp)
 
 

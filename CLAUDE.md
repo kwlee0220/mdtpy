@@ -130,7 +130,9 @@ do not cache them.
 Lifecycle: `inst.start()` / `inst.stop()` — idempotence is NOT built in: starting a
 RUNNING instance raises `InvalidResourceStateError` (catch it, or guard with
 `is_running()`). Both poll until the transition completes; pass `nowait=True` to skip
-polling. `read_asset_administration_shell()` returns the basyx AAS object.
+polling, or `timeout=<seconds>` to bound it (default `None` waits forever; on expiry the
+builtin `TimeoutError` is raised and the transition itself is not cancelled).
+`read_asset_administration_shell()` returns the basyx AAS object.
 
 ## 1.5 Parameters — `inst.parameters`
 
@@ -139,7 +141,7 @@ plus descriptor accessors `id`, `name`, `value_type` (XSD type string, or
 `"SubmodelElementCollection"`, `"File"`, ...).
 
 ```python
-p = inst.parameters['NozzleProduction']
+p = inst.parameters['NozzleProduction']   # unknown id -> ResourceNotFoundError
 p.read()                    # -> basyx model.SubmodelElement (full element)
 v = p.read_value()          # -> ElementValue (e.g. ElementCollectionValue)
 raw = v.to_raw_object()     # -> dict, e.g. {'QuantityProduced': 100, ...}
@@ -155,6 +157,7 @@ img = inst.parameters['UpperImage']
 img.put_attachment('/path/to/image.jpg')            # content_type auto-guessed
 img.put_attachment('/path/to/image.jpg', 'image/jpeg')
 data: bytes = img.get_attachment()
+data = img.get_attachment(max_bytes=5_000_000)   # FileTooLargeError if bigger; stops before downloading it all
 img.delete_attachment()
 ```
 
@@ -238,7 +241,8 @@ defect: ElementValue = results['Defect']
 
 Argument passing (`ArgumentType`): each kwarg may be
 - an `ElementReference` (incl. `MDTParameter`) — its value is read and sent; if passed for
-  an **output** id, the result is written back into that reference;
+  an **output** id, the result is written back into that reference. An output-only id
+  accepts nothing else: any other value raises `ValueError` before the call;
 - an `ElementValue` — sent as-is;
 - a raw Python value (`IncAmount=7`, `SleepTime=2.5`);
 - a basyx `model.SubmodelElement` (used for `timeseries:` data — see below).
@@ -247,9 +251,16 @@ Semantics to remember:
 - **Omitted input args** default to the operation's registered input reference (the value
   currently stored on the server).
 - **Every output** is auto-written server-side: to the reference you passed for that output
-  id if any, else to the operation's registered default output reference. `invoke()` has
+  id if any, else to the operation's registered default output reference (also when an
+  in-out id was given a plain input value). If any write fails, the remaining outputs are still
+  written and `OutputWriteError` is raised afterwards with the full result (`.outputs`) and the
+  per-output causes (`.failures`) — the operation itself succeeded, so do not re-run it. `invoke()` has
   side effects even if you ignore its return value.
-- Failure raises `OperationError`. The sync call has a very long internal timeout (7 days).
+- Failure raises `OperationError`. The sync call asks the server for a 7-day limit and waits
+  that long (plus `fa3st.DEFAULT_TIMEOUT`) for the HTTP response. If no response arrives in time
+  it raises `mdtpy.TimeoutError`: the outcome is unknown and the operation may still be running,
+  so check its state before retrying. Other fa3st requests raise the same error on a response
+  timeout (connect failures stay `MDTInstanceConnectionError`).
 
 Discovering an operation's signature:
 
@@ -275,6 +286,14 @@ results = test.operations['CountRecords'].invoke(TimeSeriesData=ts_sme)
 argument handling but NO automatic write-back of outputs and no defaulting of omitted
 inputs; you get the raw result mapping and store outputs yourself. Use when you need
 explicit control (see `sample_aas_operation.py`).
+
+**Async (lowest level)** — `SubmodelService.invoke_operation_async(path, in_vars, inout_vars, timeout)`
+returns an `OperationHandle` without waiting. It follows the AAS API v3 / FA³ST protocol:
+`POST …/invoke-async` → `202` + `Location: operation-status/<base64url(handleId)>`. Poll with
+`get_operation_async_status(path, handle)` (`execution_state` `Initiated`/`Running` until done; once
+finished the server redirects to the result) and read `get_operation_async_result(path, handle)`.
+These take raw `OperationVariable`s, do no input defaulting or output write-back, and have not been
+exercised against a live server.
 
 **Chained pipeline pattern** (from `sample_multi_ops.py`): pass parameters/references
 between operations; write-back keeps server state consistent between steps:
@@ -329,9 +348,14 @@ MDTException (all carry .details)
 ├── InvalidResourceStateError    # op not allowed in current twin state (e.g. not RUNNING)
 ├── OperationError               # operation invocation returned failure
 ├── RemoteError                  # other server-side error
-├── MDTInstanceConnectionError   # network-level failure (.cause = requests error)
-├── TimeoutError                 # remote timeout — NB: shadows builtins.TimeoutError on import *
+├── MDTInstanceConnectionError   # could not connect: the request never reached the server (.cause)
+│   └── ConnectionLostError      # connected, then lost while awaiting the response (also ResultUnknownError)
+├── ResultUnknownError           # request sent but outcome unknown — check server state before resending
+│   ├── TimeoutError             # no response in time — NB: shadows builtins.TimeoutError on import *
+│   └── ConnectionLostError
 ├── CancellationError
+├── OutputWriteError             # operation succeeded but storing outputs failed (.outputs, .failures) — do not re-run
+├── FileTooLargeError            # get_attachment(max_bytes=...) exceeded (.size may be None, .limit)
 └── InternalError
 ```
 

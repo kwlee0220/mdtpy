@@ -70,3 +70,20 @@ class TestParseJson:
                    '{"instanceId": "inst1", "submodelIdShort": "Data"}, "elementPath": "A.B"}'
         assert parse_reference_json_string(json_str) is fake_ref
         mgr.from_reference_json.assert_called_once_with(json_str)
+
+
+class TestBaseElementReferenceAttachment:
+    """get_attachment 이 크기 상한(max_bytes)을 fa3st.call_get_file 에 그대로 넘기는지 확인한다."""
+
+    @pytest.mark.parametrize("max_bytes", [None, 1024])
+    def test_passes_max_bytes(self, max_bytes):
+        from unittest.mock import PropertyMock, patch
+        from mdtpy.ref.base_reference import BaseElementReference
+
+        ref = BaseElementReference("param:I:P")
+        with patch.object(BaseElementReference, "service_url", new_callable=PropertyMock,
+                          return_value="http://srv/sme"), \
+             patch("mdtpy.ref.base_reference.fa3st.call_get_file",
+                   return_value=("image/png", b"png")) as m_get:
+            assert ref.get_attachment(max_bytes=max_bytes) == b"png"
+        m_get.assert_called_once_with("http://srv/sme/attachment", max_bytes=max_bytes)

@@ -467,6 +467,36 @@ class TestMDTInstanceLifecycle:
         with pytest.raises(InvalidResourceStateError):
             inst.stop(nowait=True)
 
+    @patch("mdtpy.instance._put")
+    @patch("mdtpy.instance.parse_none_response")
+    @patch("mdtpy.instance._get")
+    @patch("mdtpy.instance.parse_response")
+    def test_start_raises_timeout_when_stuck_starting(
+        self, mock_parse, mock_get, mock_parse_none, mock_put,
+    ):
+        mock_put.return_value = make_response(200)
+        mock_get.return_value = make_response(200)
+        mock_parse.return_value = make_descriptor(status=MDTInstanceStatus.STARTING)
+
+        inst = MDTInstance(make_descriptor(status=MDTInstanceStatus.STOPPED), BASE_URL)
+        with pytest.raises(TimeoutError):
+            inst.start(timeout=0.05)
+
+    @patch("mdtpy.instance._put")
+    @patch("mdtpy.instance.parse_none_response")
+    @patch("mdtpy.instance._get")
+    @patch("mdtpy.instance.parse_response")
+    def test_stop_raises_timeout_when_stuck_stopping(
+        self, mock_parse, mock_get, mock_parse_none, mock_put,
+    ):
+        mock_put.return_value = make_response(200)
+        mock_get.return_value = make_response(200)
+        mock_parse.return_value = make_descriptor(status=MDTInstanceStatus.STOPPING)
+
+        inst = MDTInstance(make_descriptor(status=MDTInstanceStatus.RUNNING), BASE_URL)
+        with pytest.raises(TimeoutError):
+            inst.stop(timeout=0.05)
+
     @patch("mdtpy.instance._get")
     @patch("mdtpy.instance.parse_response")
     def test_reload_descriptor_updates_state(self, mock_parse, mock_get):

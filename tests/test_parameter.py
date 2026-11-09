@@ -13,7 +13,7 @@ import pytest
 
 import mdtpy.instance as instance_mod
 from mdtpy.descriptor import MDTParameterDescriptor
-from mdtpy.exceptions import MDTException
+from mdtpy.exceptions import MDTException, ResourceNotFoundError
 from mdtpy.parameter import MDTParameter, MDTParameterCollection
 from mdtpy.ref import BaseElementReference
 
@@ -134,13 +134,20 @@ class TestMDTParameterCollection:
         assert coll["p1"] is p1
         assert coll["p2"] is p2
 
-    def test_getitem_unknown_id_raises_key_error(self):
+    def test_getitem_unknown_id_raises_resource_not_found_with_available_ids(self):
         coll = MDTParameterCollection([self._make_param("p1")])
-        with pytest.raises(KeyError):
+        with pytest.raises(ResourceNotFoundError, match=r"id=missing.*'p1'"):
             _ = coll["missing"]
 
-    def test_contains_uses_default_mapping_implementation(self):
-        """`Mapping`이 제공하는 기본 `__contains__`로 'x in coll'이 동작해야 한다."""
+    def test_get_returns_default_for_unknown_id(self):
+        p1 = self._make_param("p1")
+        coll = MDTParameterCollection([p1])
+        assert coll.get("p1") is p1
+        assert coll.get("missing") is None
+        assert coll.get("missing", p1) is p1
+
+    def test_contains(self):
+        """'x in coll'이 존재 여부를 돌려줘야 한다."""
         coll = MDTParameterCollection([self._make_param("known")])
         assert "known" in coll
         assert "unknown" not in coll

@@ -133,7 +133,8 @@ class OperationResult:
         서버 JSON 응답에서 OperationResult를 구성한다.
 
         서버 키 `outputArguments` / `inoutputArguments`를 OperationVariable
-        목록으로 변환한다.
+        목록으로 변환한다. 비동기 연산의 상태 응답(실행 중)처럼 `success` 가 없는 응답은
+        `success=False` 로 본다.
 
         Args:
             data (dict): JSON으로 파싱된 응답 본문.
@@ -150,7 +151,7 @@ class OperationResult:
         return cls(
             messages=data.get('messages'),
             execution_state=data['executionState'],
-            success=data['success'],
+            success=data.get('success', False),
             output_op_variables=output_arguments,
             inoutput_op_variables=inoutput_arguments,
         )
@@ -166,25 +167,13 @@ class OperationHandle:
     """
     비동기 Operation 호출이 반환하는 핸들.
 
+    서버는 핸들을 응답 본문이 아니라 Location 헤더(`operation-status/<base64url(handleId)>`)로 알려 주며,
+    `SubmodelService.invoke_operation_async` 가 거기서 꺼내 만든다.
+
     Attributes:
-        handle_id (str): 서버가 발급한 비동기 작업 식별자.
+        handle_id (str): 서버가 발급한 비동기 작업 식별자 (base64url 로 디코딩한 값).
     """
     handle_id: str
-
-    @classmethod
-    def from_json(cls, json_str: str) -> OperationHandle:
-        """
-        JSON 문자열에서 OperationHandle을 만든다.
-
-        서버는 `handleId` 키(camelCase)를 사용하므로 그에 맞춰 매핑한다.
-
-        Args:
-            json_str (str): `{"handleId": "..."}` 형식의 JSON.
-        Returns:
-            OperationHandle: 핸들 객체.
-        """
-        json_dict = json.loads(json_str)
-        return cls(handle_id=json_dict['handleId'])
 
 
 @dataclass(slots=True)

@@ -297,14 +297,47 @@ class TestOperationSubmodelServiceInvoke:
         def_ref.update_value.assert_called_once_with(99)
 
     @patch("mdtpy.operation.mdt_operation.reference")
-    def test_invoke_does_not_update_non_reference_kwarg(self, m_ref):
-        """ElementReference가 아닌 일반 값이 kwargs로 온 인자는 update 대상이 아니며,
-        기본 출력 참조로도 fallback하지 않는다(reference()가 호출되지 않는다)."""
-        svc = self._bare_svc(output_descs=[make_arg_desc(id="out", reference="ref:out")])
-        svc.op.invoke.return_value = {"out": 99}
+    def test_invoke_reports_output_write_failure_separately_and_keeps_writing(self, m_ref):
+        """연산 성공 후 출력 저장이 실패하면 OperationError 가 아니라 OutputWriteError 이고,
+        나머지 출력은 계속 저장하며, 예외에 결과 전체를 담는다."""
+        from mdtpy.exceptions import OutputWriteError, ResourceNotFoundError
+        bad_ref = MagicMock(spec=ElementReference)
+        bad_ref.update_value.side_effect = ResourceNotFoundError("no such target")
+        good_ref = MagicMock(spec=ElementReference)
+        svc = self._bare_svc(output_descs=[make_arg_desc(id="a", reference="ref:a"),
+                                           make_arg_desc(id="b", reference="ref:b")])
+        svc.op.invoke.return_value = {"a": 1, "b": 2}
 
-        assert svc.invoke(out=42) == {"out": 99}
-        m_ref.assert_not_called()
+        with pytest.raises(OutputWriteError) as info:
+            svc.invoke(a=bad_ref, b=good_ref)
+
+        assert info.value.outputs == {"a": 1, "b": 2}
+        assert list(info.value.failures) == ["a"]
+        assert isinstance(info.value.failures["a"], ResourceNotFoundError)
+        good_ref.update_value.assert_called_once_with(2)
+
+    def test_invoke_rejects_non_reference_for_output_only_arg(self):
+        """출력 전용 인자에 ElementReference가 아닌 값을 주면 연산을 호출하지 않고 ValueError."""
+        svc = self._bare_svc(output_descs=[make_arg_desc(id="out", reference="ref:out")])
+
+        with pytest.raises(ValueError, match="out"):
+            svc.invoke(out=42)
+        svc.op.invoke.assert_not_called()
+
+    @patch("mdtpy.operation.mdt_operation.reference")
+    def test_invoke_updates_default_output_for_inout_arg_given_raw_value(self, m_ref):
+        """입출력 인자에 원시값을 주면 입력으로 쓰이고, 결과는 기본 출력 참조에 갱신된다."""
+        def_ref = MagicMock(spec=ElementReference)
+        m_ref.return_value = def_ref
+        svc = self._bare_svc(input_descs=[make_arg_desc(id="io", reference="ref:io:in")],
+                             output_descs=[make_arg_desc(id="io", reference="ref:io:out")])
+        svc.op.invoke.return_value = {"io": 99}
+
+        svc.invoke(io=42)
+
+        svc.op.invoke.assert_called_once_with(io=42)
+        m_ref.assert_any_call("ref:io:out")
+        def_ref.update_value.assert_called_once_with(99)
 
     def test_invoke_updates_any_kwargs_reference_present_in_result(self):
         """결과에 해당 id가 있으면 kwargs로 받은 ElementReference는 출력 선언 여부와

@@ -170,13 +170,18 @@ class BaseElementReference(ElementReference):
             raise RuntimeError(f"MDTInstance is not running: ref={self.ref_string}")
         fa3st.call_delete(self.service_url)
 
-    def get_attachment(self) -> Optional[bytes]:
+    def get_attachment(self, max_bytes: Optional[int] = None) -> Optional[bytes]:
         """File 요소에 첨부된 파일의 바이트 내용을 반환한다.
 
+        Args:
+            max_bytes (Optional[int]): 내려받을 파일의 최대 크기(바이트). 넘으면 전부 내려받기 전에
+                멈추고 `FileTooLargeError` 를 낸다. None 이면 제한하지 않는다.
         Returns:
             Optional[bytes]: 첨부 파일의 바이트 내용. 첨부가 없으면 None.
+        Raises:
+            FileTooLargeError: 파일이 `max_bytes` 보다 큰 경우.
         """
-        ret = fa3st.call_get_file(f'{self.service_url}/attachment')
+        ret = fa3st.call_get_file(f'{self.service_url}/attachment', max_bytes=max_bytes)
         return ret[1] if ret else None
 
     def put_attachment(self, file_path:str, content_type:Optional[str]=None) -> None:

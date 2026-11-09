@@ -211,6 +211,9 @@ class SubmodelService:
             timeout (datetime.timedelta): 타임아웃.
         Returns:
             OperationResult: 연산 결과.
+        Raises:
+            TimeoutError: timeout(+여유 시간) 안에 응답을 받지 못한 경우 (mdtpy.TimeoutError).
+                연산이 서버에서 아직 실행 중이거나 이미 끝났을 수 있다.
         """
         url = self.submodel_element_url(op_path) + "/invoke"
         req = OperationRequest(
@@ -219,8 +222,12 @@ class SubmodelService:
             client_timeout_duration=timeout,
         )
         json_str = req.to_json()
+        # 서버는 연산이 끝난 뒤에 응답하므로, 응답 대기 제한은 연산 제한 시간보다 길어야 한다.
+        # (연결 제한은 기본값을 쓴다.) 응답을 받지 못하면 연산의 성공 여부를 알 수 없으므로
+        # mdtpy.TimeoutError 가 난다.
+        http_timeout = (fa3st.DEFAULT_TIMEOUT, timeout.total_seconds() + fa3st.DEFAULT_TIMEOUT)
         return fa3st.call_post(  # type: ignore
-            url, data=json_str, deserializer=OperationResult.from_json
+            url, data=json_str, deserializer=OperationResult.from_json, timeout=http_timeout
         )
 
     def invoke_operation_async(
@@ -231,39 +238,63 @@ class SubmodelService:
         timeout: datetime.timedelta,
     ) -> OperationHandle:
         """
-        주어진 연산 경로에 해당하는 연산을 비동기적으로 호출한다.
+        주어진 연산 경로에 해당하는 연산을 비동기적으로 호출하고, 끝나기를 기다리지 않고 핸들을 반환한다.
+
+        AAS API v3 의 `POST …/invoke-async` 를 쓴다. 서버는 `202 Accepted` 와 함께
+        `Location: operation-status/<base64url(handleId)>` 를 돌려주며, 이 헤더에서 핸들을 꺼낸다.
+        상태는 :meth:`get_operation_async_status`, 결과는 :meth:`get_operation_async_result` 로 조회한다.
 
         Args:
             op_path (str): 연산 경로.
             input_op_variables (Iterable[OperationVariable]): 입력 연산 변수 목록.
             inoutput_op_variables (Iterable[OperationVariable]): 입출력 연산 변수 목록.
-            timeout (datetime.timedelta): 타임아웃.
+            timeout (datetime.timedelta): 서버가 연산에 허용할 최대 실행 시간.
         Returns:
-            OperationHandle: 연산 결과.
+            OperationHandle: 비동기 연산 핸들.
+        Raises:
+            MDTException: 서버가 오류를 반환했거나 응답에 Location 헤더가 없는 경우.
         """
-        url = self.submodel_element_url(op_path) + "/invoke?async=true"
+        url = self.submodel_element_url(op_path) + "/invoke-async"
         req = OperationRequest(
             input_arguments=input_op_variables,
             inoutput_arguments=inoutput_op_variables,
             client_timeout_duration=timeout,
         )
-        json_str = req.to_json()
-        return fa3st.call_post(  # type: ignore
-            url, data=json_str, deserializer=OperationHandle.from_json
-        )
+        status_url = fa3st.call_post_for_location(url, data=req.to_json())
+        encoded_handle = parse.unquote(status_url.rstrip('/').rsplit('/', 1)[-1])
+        return OperationHandle(handle_id=fa3st.decode_base64url(encoded_handle))
 
-    def get_operation_async_result(self, path: str, handle: OperationHandle) -> OperationResult:
+    def get_operation_async_status(self, path: str, handle: OperationHandle) -> OperationResult:
         """
-        주어진 연산 경로에 해당하는 연산의 비동기 결과를 반환한다.
+        비동기 연산의 현재 상태를 반환한다.
+
+        `GET …/operation-status/<base64url(handleId)>` 를 호출한다. 실행 중(`Initiated`, `Running`)이면
+        서버가 상태만 돌려주므로 출력 변수는 None 이다. 끝났으면 서버가 `302` 로 결과 위치
+        (`operation-results`)를 알려 주고, 그 결과(출력 변수 포함)를 받아 반환한다.
 
         Args:
             path (str): 연산 경로.
-            handle (OperationHandle): 연산 결과 핸들.
+            handle (OperationHandle): 비동기 연산 핸들.
+        Returns:
+            OperationResult: 연산 상태. `execution_state` 로 진행 여부를 판단한다.
+        """
+        url = self.submodel_element_url(path) + f"/operation-status/{fa3st.encode_base64url(handle.handle_id)}"
+        return fa3st.call_get(url, deserializer=OperationResult.from_json) # type: ignore
+
+    def get_operation_async_result(self, path: str, handle: OperationHandle) -> OperationResult:
+        """
+        비동기 연산의 결과를 반환한다.
+
+        `GET …/operation-results/<base64url(handleId)>` 를 호출한다. 서버에 저장된 결과를 그대로 돌려주므로,
+        연산이 아직 실행 중이면 `execution_state` 가 실행 중 상태인 결과가 온다.
+
+        Args:
+            path (str): 연산 경로.
+            handle (OperationHandle): 비동기 연산 핸들.
         Returns:
             OperationResult: 연산 결과.
         """
-        encoded_handle = parse.quote(handle.handle_id, safe="")
-        url = self.submodel_element_url(path) + f"/operation-results/{encoded_handle}"
+        url = self.submodel_element_url(path) + f"/operation-results/{fa3st.encode_base64url(handle.handle_id)}"
         return fa3st.call_get(url, deserializer=OperationResult.from_json) # type: ignore
 
     def submodel_element_url(self, path: str) -> str:
@@ -404,6 +435,21 @@ class SubmodelServiceCollection(Mapping[str, T]):
         """
         return key in self.__services
 
+    def get(self, id_short: str, default: Optional[T] = None) -> Optional[T]:  # type: ignore[override]
+        """
+        주어진 idShort의 SubmodelService를 반환하고, 없으면 `default` 를 반환한다.
+
+        `__getitem__` 이 `KeyError` 가 아니라 `ResourceNotFoundError` 를 내므로
+        `Mapping` 의 기본 구현 대신 직접 구현한다.
+
+        Args:
+            id_short (str): idShort.
+            default (Optional[T]): 없을 때 반환할 값.
+        Returns:
+            Optional[T]: SubmodelService 또는 `default`.
+        """
+        return self.__services.get(id_short, default)
+
     def get_by_id(self, id: str) -> T:
         """
         주어진 Submodel id(URI)에 해당하는 SubmodelService를 반환한다.
@@ -475,11 +521,30 @@ class SubmodelElementCollection(Mapping[str, model.SubmodelElement]):
     def __contains__(self, path: str) -> bool:
         return path in self.__pathes()
 
+    def get(self, path: str, default: Optional[model.SubmodelElement] = None
+            ) -> Optional[model.SubmodelElement]:  # type: ignore[override]
+        """
+        주어진 경로의 SubmodelElement 를 읽어 반환하고, 없으면 `default` 를 반환한다.
+
+        `__getitem__` 은 없는 경로에 `KeyError` 가 아니라 `ResourceNotFoundError`(서버 404)를 내므로
+        `Mapping` 의 기본 구현 대신 직접 구현한다. 경로 목록을 따로 읽지 않고 요소를 한 번만 읽는다.
+
+        Args:
+            path (str): idShort 경로.
+            default (Optional[model.SubmodelElement]): 없을 때 반환할 값.
+        Returns:
+            Optional[model.SubmodelElement]: SubmodelElement 또는 `default`.
+        """
+        try:
+            return self[path]
+        except ResourceNotFoundError:
+            return default
+
     def get_value(self, path: str) -> Any:
         return self.element_reference(path).read_value()
 
     def update_value(self, path: str, value: Any) -> None:
         self.element_reference(path).update_value(value)
 
-    def get_attachment(self, path: str) -> Optional[bytes]:
-        return self.element_reference(path).get_attachment()
+    def get_attachment(self, path: str, max_bytes: Optional[int] = None) -> Optional[bytes]:
+        return self.element_reference(path).get_attachment(max_bytes=max_bytes)
