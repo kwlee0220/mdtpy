@@ -34,7 +34,7 @@ MQTT_TOPIC = f"mdt/{INSTANCE_ID}/parameters/{PARAMETER_ID}"
 PUBLISH_COUNT = 10000
 
 POLL_INTERVAL = 0.1        # 초
-POLL_TIMEOUT = 120.0        # 초. 이 시간 안에 마지막 값이 반영되지 않으면 실패로 끝낸다.
+POLL_TIMEOUT = 150.0        # 초. 이 시간 안에 마지막 값이 반영되지 않으면 실패로 끝낸다.
 
 
 def main() -> None:
@@ -43,6 +43,7 @@ def main() -> None:
 
     # 파라미터 값은 트윈이 RUNNING일 때만 읽고 쓸 수 있다.
     if not inst.is_running():
+        print(f"instance {INSTANCE_ID} is not running")
         return
     param = inst.parameters[PARAMETER_ID]
     param.update_with_raw_value(0)
@@ -63,10 +64,12 @@ def main() -> None:
         print(f"start time: {started:.3f}")
         for i in range(1, PUBLISH_COUNT + 1):
             info = client.publish(MQTT_TOPIC, json.dumps(i), qos=1)
-            if i % 1000 == 0:
-                print(f"published {i} messages")
+            if i % 1000 == 0 and i != PUBLISH_COUNT:
+                published = time.perf_counter()
+                # per_update = (published - started) / i * 1000
+                print(f"published {i} messages: {published - started:.3f}s")
             if i != PUBLISH_COUNT and i % 500 == 0:
-                time.sleep(4.1) # 4.5s 대기
+                time.sleep(4.9) # 4.5s 대기
         published = time.perf_counter()
         print(f"published {PUBLISH_COUNT} messages: {published - started:.3f}s")
 

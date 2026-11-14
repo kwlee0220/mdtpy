@@ -518,7 +518,7 @@ class TestFromRawObject:
 # polymorphic JSON (@type/value) 직렬화/역직렬화
 # --------------------------------------------------------------------------- #
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 
@@ -546,6 +546,10 @@ class TestToJsonNode:
         dt = model.datatypes.from_xsd("2020-01-02T03:04:05", model.datatypes.DateTime)
         node = PropertyValue(dt, model.datatypes.DateTime).to_json_node()
         assert node == {"@type": "mdt:value:dateTime", "value": "2020-01-02T03:04:05"}
+
+    def test_property_date_is_xsd_string(self):
+        node = PropertyValue(date(2026, 10, 19), model.datatypes.Date).to_json_node()
+        assert node == {"@type": "mdt:value:date", "value": "2026-10-19"}
 
     def test_property_decimal_is_xsd_string(self):
         node = PropertyValue(Decimal("12.34"), model.datatypes.Decimal).to_json_node()
@@ -579,10 +583,10 @@ class TestToJsonNode:
                         "value": [{"@type": "mdt:value:integer", "value": 1}]}
 
     def test_unsupported_property_type_raises(self):
-        # 지원하지 않는 XSD 타입(예: xs:date)은 ValueError 를 발생시킨다.
-        from datetime import date
+        # 지원하지 않는 XSD 타입(예: xs:time)은 ValueError 를 발생시킨다.
+        from datetime import time
         with pytest.raises(ValueError, match="unsupported property value type"):
-            PropertyValue(date(2020, 1, 1), model.datatypes.Date).to_json_node()
+            PropertyValue(time(1, 2, 3), model.datatypes.Time).to_json_node()
 
 
 class TestToRawJsonNode:
@@ -630,6 +634,10 @@ class TestParseJsonNode:
     def test_property_datetime(self):
         ev = parse_json_node({"@type": "mdt:value:dateTime", "value": "2020-01-02T03:04:05"})
         assert ev == PropertyValue(datetime(2020, 1, 2, 3, 4, 5), model.datatypes.DateTime)
+
+    def test_property_date(self):
+        ev = parse_json_node({"@type": "mdt:value:date", "value": "2026-10-19"})
+        assert ev == PropertyValue(date(2026, 10, 19), model.datatypes.Date)
 
     def test_property_decimal(self):
         ev = parse_json_node({"@type": "mdt:value:decimal", "value": "12.34"})

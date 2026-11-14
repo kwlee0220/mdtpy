@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Optional, cast
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 from basyx.aas import model
@@ -27,6 +27,7 @@ TYPE_FLOAT = 'mdt:value:float'
 TYPE_DOUBLE = 'mdt:value:double'
 TYPE_BOOLEAN = 'mdt:value:boolean'
 TYPE_DATETIME = 'mdt:value:dateTime'
+TYPE_DATE = 'mdt:value:date'
 TYPE_DURATION = 'mdt:value:duration'
 TYPE_DECIMAL = 'mdt:value:decimal'
 # 컨테이너/기타 직렬화 식별자 ----------------------------------------------------
@@ -47,6 +48,7 @@ _XSD_TO_MDT_TYPE: dict[str, str] = {
     'xs:double': TYPE_DOUBLE,
     'xs:boolean': TYPE_BOOLEAN,
     'xs:dateTime': TYPE_DATETIME,
+    'xs:date': TYPE_DATE,
     'xs:duration': TYPE_DURATION,
     'xs:decimal': TYPE_DECIMAL,
 }
@@ -60,6 +62,7 @@ _MDT_TYPE_TO_XSD: dict[str, str] = {
     TYPE_DOUBLE: 'xs:double',
     TYPE_BOOLEAN: 'xs:boolean',
     TYPE_DATETIME: 'xs:dateTime',
+    TYPE_DATE: 'xs:date',
     TYPE_DURATION: 'xs:duration',
     TYPE_DECIMAL: 'xs:decimal',
 }
@@ -96,6 +99,8 @@ def _infer_xsd_name(value: Any) -> str:
         return 'xs:string'
     if isinstance(value, datetime):
         return 'xs:dateTime'
+    if isinstance(value, date):             # datetime 은 date 의 서브클래스이므로 그 뒤에 검사한다
+        return 'xs:date'
     if isinstance(value, (relativedelta, timedelta)):
         return 'xs:duration'
     if isinstance(value, Decimal):
