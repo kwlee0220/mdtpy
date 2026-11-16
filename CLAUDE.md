@@ -408,6 +408,34 @@ Prefer these over generic `RuntimeError`/`ValueError` when writing mdtpy-based s
     (→ `input_arg_descs` / `output_arg_desc_dict`), `ElementReferenceDict`, subscript
     access on `FileValue` (→ `.content_type` attribute).
 
+## 1.15 Workflow Manager — `mdtpy.connect_workflow_manager`
+
+mdt-workflow (a separate server, default port 12989) holds **workflow models** (task graphs over
+twins) and **workflows** (runs of a model, i.e. Airflow DAG runs). `mdtpy.workflow` wraps its
+query API plus run start/stop; it does not touch the `mdtpy.connect()` globals.
+
+```python
+wm = mdtpy.connect_workflow_manager("http://<host>:12989/workflow-manager")   # no HTTP here
+wm.models()                      # -> list[dict]: raw JSON (id, name, description, taskDescriptors, gui)
+wm.get_model('ModelId')          # -> dict; unknown id -> ResourceNotFoundError
+wm.get_model_script('ModelId')   # -> str: generated Airflow DAG script
+wm.workflows(model_id=None)      # -> list[Workflow]
+wf = wm.get_workflow(wf.name)    # -> Workflow (name is '<dagId>__<dagRunId>')
+wm.get_task_log(wf.name, 'TaskId')   # -> str: latest attempt log
+wf = wm.start_workflow('ModelId', run_id='run-001')   # -> Workflow, returns without waiting
+wm.stop_workflow(wf.name)        # running/queued run (and its running tasks) -> FAILED; no-op if finished
+```
+
+`start_workflow` with the same `run_id` returns the existing run instead of starting another,
+so after a `ResultUnknownError` (timeout / connection lost) retry with the **same** `run_id`.
+Connection failures follow the FA³ST layer: `MDTInstanceConnectionError` (not sent) vs.
+`ConnectionLostError` / `mdtpy.TimeoutError` (`ResultUnknownError`).
+
+`Workflow` / `NodeTask` are `JSONWizard` dataclasses (`name`, `model_id`, `status:
+WorkflowStatus`, `creation_time`/`start_time`/`finish_time` as ISO strings, `tasks`).
+`WorkflowStatus`: `NOT_STARTED`, `STARTING`, `RUNNING`, `COMPLETED`, `FAILED`, `UNKNOWN`.
+Models stay raw dicts because task descriptors differ per task type.
+
 ---
 
 # Part 2 — Working on the mdtpy codebase itself
