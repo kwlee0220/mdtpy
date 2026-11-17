@@ -413,7 +413,10 @@ class MDTInstanceCollection:
                 data = {'id': instance_id, 'port': str(port)}
                 resp = _post(self.__url_prefix, files=files, data=data, timeout=60)
 
-        inst_desc: InstanceDescriptor = parse_response(resp, InstanceDescriptor)  # type: ignore
+        # mdt-manager 는 등록된 descriptor JSON 을 text/plain 으로 보내므로, 본문이 문자열이면 JSON 으로 읽는다.
+        body = parse_response(resp, InstanceDescriptor)
+        inst_desc: InstanceDescriptor = (InstanceDescriptor.from_dict(json.loads(body))  # type: ignore
+                                         if isinstance(body, str) else body)
         return MDTInstance(inst_desc, self.__inst_url)
         
     def __delitem__(self, instance_id: str) -> None:

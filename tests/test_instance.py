@@ -329,6 +329,22 @@ class TestMDTInstanceCollection:
         assert kwargs.get("timeout") == 60
 
     @patch("mdtpy.instance._post")
+    def test_add_parses_descriptor_sent_as_text_plain(self, mock_post, tmp_path):
+        # mdt-manager 는 등록된 descriptor JSON 을 text/plain 으로 보낸다.
+        import json as _json
+        src = tmp_path / "bundle"
+        src.mkdir()
+        resp = make_response(201)
+        resp.headers = {"content-type": "text/plain;charset=UTF-8"}
+        resp.text = _json.dumps({"id": "new-inst", "status": "STOPPED", "aasId": "aas:new"})
+        mock_post.return_value = resp
+
+        inst = self.coll.add("new-inst", 9000, str(src))
+
+        assert inst.id == "new-inst"
+        assert inst.aas_id == "aas:new"
+
+    @patch("mdtpy.instance._post")
     @patch("mdtpy.instance.parse_response")
     def test_add_cleans_up_temp_zip(self, mock_parse, mock_post, tmp_path):
         src = tmp_path / "bundle"
