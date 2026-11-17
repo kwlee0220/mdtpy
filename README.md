@@ -206,7 +206,7 @@ unzip -l dist/mdtpy-*.whl                  # samples 제외 여부 확인
 
 1. [PyPI](https://pypi.org) API 토큰(`pypi-...`)을 발급받는다. 사전 검증용으로
    [TestPyPI](https://test.pypi.org) 가입을 권장한다. 새 릴리스마다
-   `pyproject.toml`의 `version`을 올린다 (동일 버전 재업로드 불가).
+   `src/mdtpy/__init__.py`의 `__version__`을 올린다 (`pyproject.toml`이 이 값을 읽는다. 동일 버전 재업로드 불가).
 2. (권장) TestPyPI 업로드 및 검증:
 
    ```bash

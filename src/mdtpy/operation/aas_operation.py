@@ -8,7 +8,7 @@ from ..submodel import SubmodelService
 from ..ref import ElementReference
 from ..value import ElementValue, update_element_with_raw_value, get_value, RawElementValueType
 from ..aas_misc import OperationVariable
-from ..exceptions import OperationError
+from ..exceptions import OperationError, InvalidArgumentError, MDTException
 
 
 # 오퍼레이터 호출에 사용되는 인자의 타입을 정의한다.
@@ -68,26 +68,35 @@ class AASOperationService:
         Returns:
             dict[str, ElementValue]: 출력·입출력 인자 식별자를 키로 하는 결과 값 목록.
         Raises:
+            InvalidArgumentError: 인자 값을 연산 변수에 적용하지 못한 경우. 연산은 호출하지 않았다.
             OperationError: 연산 호출이 실패한 경우.
         """
         # 인자로 전달된 값을 OperationVariable의 값으로 업데이트한다.
+        # 여기서 난 오류는 연산을 호출하기 전이므로, 호출 뒤의 오류와 구분할 수 있게 InvalidArgumentError 로 감싼다.
+        # 참조 인자를 원격으로 읽다 난 오류(MDTException)는 원인 그대로 올린다.
         for opv in self.in_op_variables + self.inout_op_variables:
             var_id = str(opv.value.id_short)
             if var_id in kwargs:
                 arg = kwargs[var_id]
-                match arg:
-                    case ElementReference():
-                        arg.read_value().apply_to(opv.value)
-                    case ElementValue():
-                        arg.apply_to(opv.value)
-                    case model.SubmodelElement():
-                        # OperationVariable의 idshort가 연산 변수의 식별자로 사용되기 때문에
-                        # SubmodelElement의 idshort를 덮어쓰지 않도록 보존한다.
-                        arg_name = opv.value.id_short
-                        opv.value = arg
-                        opv.value.id_short = arg_name
-                    case _:
-                        update_element_with_raw_value(opv.value, arg)
+                try:
+                    match arg:
+                        case ElementReference():
+                            arg.read_value().apply_to(opv.value)
+                        case ElementValue():
+                            arg.apply_to(opv.value)
+                        case model.SubmodelElement():
+                            # OperationVariable의 idshort가 연산 변수의 식별자로 사용되기 때문에
+                            # SubmodelElement의 idshort를 덮어쓰지 않도록 보존한다.
+                            arg_name = opv.value.id_short
+                            opv.value = arg
+                            opv.value.id_short = arg_name
+                        case _:
+                            update_element_with_raw_value(opv.value, arg)
+                except MDTException:
+                    raise
+                except Exception as e:
+                    raise InvalidArgumentError(var_id, f"cannot apply argument '{var_id}': "
+                                                       f"{type(e).__name__}: {e}") from e
 
         result = self.__submodel_svc.invoke_operation_sync(self.__operation_path,
                                                           self.in_op_variables,

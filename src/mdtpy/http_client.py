@@ -99,6 +99,10 @@ def to_exception(resp: requests.Response) -> MDTException:
     """
     서버 오류 응답을 적절한 `MDTException` 하위 타입으로 변환한다.
 
+    RemoteError 로 분류되면 응답의 HTTP 상태 코드를 `status_code` 에 담는다.
+    본문 형식만으로는 404(대상 없음)와 5xx(서버·게이트웨이 오류)가 같은 RemoteError 가 되므로,
+    호출자는 상태 코드로 구분한다.
+
     분류 규칙(우선순위 순):
         1. `Content-Type`이 `text/*`로 시작하면 `resp.text`를 담은 RemoteError 반환
            (JSON 파싱 시도하지 않음).
@@ -128,6 +132,14 @@ def to_exception(resp: requests.Response) -> MDTException:
     Returns:
         MDTException: 분기에 따라 RemoteError 또는 ResourceNotFoundError 인스턴스.
     """
+    error = _classify_error_response(resp)
+    if isinstance(error, RemoteError) and error.status_code is None:
+        error.status_code = resp.status_code
+    return error
+
+
+def _classify_error_response(resp: requests.Response) -> MDTException:
+    """`to_exception` 의 분류 규칙을 적용한다. 상태 코드는 `to_exception` 이 채운다."""
     # 1. text/* 응답
     ctype = resp.headers.get('Content-Type', '')
     if ctype.startswith('text/'):

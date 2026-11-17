@@ -16,7 +16,8 @@ from .aas_operation import ArgumentType
 def parse_argument_json_node(arg_json_node: Any) -> ArgumentType:
     """연산 인자 하나에 해당하는 JSON 노드를 대응되는 파이썬 객체로 변환한다.
 
-    노드의 타입 태그를 보고 적절한 파서로 분배한다.
+    연산의 입력·출력 인자뿐 아니라 파라미터 값처럼 값·참조·SubmodelElement 를 담을 수 있는
+    JSON 노드에도 쓴다. 노드의 타입 태그를 보고 적절한 파서로 분배한다.
 
     * ``dict`` 가 아닌 노드(스칼라 등)는 그대로 반환한다.
     * ``@type`` 이 ``mdt:value:`` 로 시작하면 :class:`~mdtpy.value.ElementValue` 로 변환한다
@@ -61,7 +62,7 @@ def parse_argument_json_node(arg_json_node: Any) -> ArgumentType:
         elif type_str.startswith('mdt:ref:'):
             return parse_reference_json_node(arg_json_node)
         else:
-            raise ValueError(f"Unknown output type: {type_str}")
+            raise ValueError(f"Unknown @type: {type_str}")
 
 
 def to_argument_json_node(arg: ArgumentType) -> Any:

@@ -4,7 +4,7 @@ from ..submodel import SubmodelService
 from ..descriptor import MDTOperationDescriptor, MDTSubmodelDescriptor
 from ..ref import ElementReference, reference
 from ..value import ElementValue
-from ..exceptions import OutputWriteError
+from ..exceptions import OutputWriteError, InvalidArgumentError
 from .aas_operation import AASOperationService, ArgumentType
 
 
@@ -65,7 +65,8 @@ class OperationSubmodelService(SubmodelService):
         Returns:
             dict[str, ElementValue]: 출력·입출력 인자 식별자를 키로 하는 결과 값 목록.
         Raises:
-            ValueError: 출력 전용 인자에 ``ElementReference`` 가 아닌 값을 준 경우.
+            InvalidArgumentError: 출력 전용 인자에 ``ElementReference`` 가 아닌 값을 주었거나, 입력 인자 값을
+                연산 변수에 적용하지 못한 경우. 연산은 호출하지 않았다(``ValueError`` 이기도 하다).
             OperationError: 연산 호출이 실패한 경우.
             OutputWriteError: 연산은 성공했으나 출력 값을 저장하지 못한 경우. 나머지 출력은 저장을
                 시도하며, 예외에 결과 전체(``outputs``)와 실패한 출력(``failures``)을 담는다.
@@ -74,7 +75,7 @@ class OperationSubmodelService(SubmodelService):
         for arg_id, argspec in kwargs.items():
             if (arg_id in self.output_arg_desc_dict and arg_id not in input_ids
                     and not isinstance(argspec, ElementReference)):
-                raise ValueError(f"output argument '{arg_id}' accepts only an ElementReference "
+                raise InvalidArgumentError(arg_id, f"output argument '{arg_id}' accepts only an ElementReference "
                                  f"(the location to store the result): {argspec!r}")
 
         # 함수 인자로 전달된 값을 input argument에 반영시킨다.

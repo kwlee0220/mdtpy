@@ -112,15 +112,37 @@ class OperationError(MDTException):
         super().__init__(details)
 
 
+class InvalidArgumentError(MDTException, ValueError):
+    """연산 인자를 적용하지 못해 연산을 호출하지 않은 경우.
+
+    값의 형식이 인자의 타입과 맞지 않거나(예: xs:int 인자에 'abc'), 출력 전용 인자에 저장 위치가 아닌 값을
+    준 경우다. 연산을 호출하기 전에 나므로 연산은 실행되지 않았다. 호출 뒤에 난 오류와 구분할 수 있도록
+    따로 둔다. `ValueError` 이기도 하므로 `except ValueError` 로도 잡힌다.
+
+    Attributes:
+        argument_id (str): 적용하지 못한 인자의 id.
+    """
+
+    def __init__(self, argument_id: str, details: str) -> None:
+        self.argument_id = argument_id
+        super().__init__(details)
+
+
 class RemoteError(MDTException):
     """
     서버가 비-2xx 응답을 반환했거나 알 수 없는 오류 코드로 실패한 경우.
 
     `http_client.to_exception` / `fa3st.to_exception`이 분류 결과를 본 타입의
     인스턴스로 만들거나 직접 raise한다.
+
+    Attributes:
+        status_code (Optional[int]): 응답의 HTTP 상태 코드. 응답으로 만든 경우에만 있다.
+            본문만으로는 같은 RemoteError 로 분류되는 응답(예: 404 첨부 파일 없음, 502 게이트웨이 오류)을
+            호출자가 구분할 때 쓴다.
     """
 
-    def __init__(self, details: str) -> None:
+    def __init__(self, details: str, status_code: Optional[int] = None) -> None:
+        self.status_code = status_code
         super().__init__(details)
 
 
@@ -247,6 +269,7 @@ __all__ = [
     "ConnectionLostError",
     "CancellationError",
     "OperationError",
+    "InvalidArgumentError",
     "RemoteError",
     "MDTInstanceConnectionError",
     "ResourceAlreadyExistsError",

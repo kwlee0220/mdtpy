@@ -144,6 +144,25 @@ class TestParseListResponse:
 # to_exception
 # --------------------------------------------------------------------------- #
 
+class TestToExceptionStatusCode:
+    """RemoteError 는 응답의 HTTP 상태 코드를 담아, 본문 형식이 같은 404 와 5xx 를 구분하게 한다."""
+
+    def test_messages_404_keeps_status_code(self):
+        resp = make_response(status_code=404,
+                             json_data={"messages": [{"text": "could not find file for path 'X'"}]})
+        exc = to_exception(resp)
+        assert isinstance(exc, RemoteError) and exc.status_code == 404
+
+    def test_unparsable_502_keeps_status_code(self):
+        resp = make_response(status_code=502, text="<html>Bad Gateway</html>")
+        resp.json.side_effect = ValueError("not json")
+        exc = to_exception(resp)
+        assert isinstance(exc, RemoteError) and exc.status_code == 502 and "Bad Gateway" in str(exc)
+
+    def test_directly_created_remote_error_has_no_status_code(self):
+        assert RemoteError("x").status_code is None
+
+
 class TestToException:
     # ----- messages 우선 처리 ----- #
 

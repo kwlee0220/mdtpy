@@ -14,7 +14,7 @@ AAS servers), and models everything on the Asset Administration Shell (AAS) stan
 `src/samples/sample_*.py`.
 
 - Package: `mdtpy` (src layout: `src/mdtpy/`), Python ≥ 3.10, managed with `uv`.
-- Version: see `pyproject.toml` (`0.2.9` at time of writing).
+- Version: `__version__` in `src/mdtpy/__init__.py` is the single source; `pyproject.toml` reads it (`dynamic = ["version"]`).
 
 ---
 
@@ -256,6 +256,10 @@ Semantics to remember:
   written and `OutputWriteError` is raised afterwards with the full result (`.outputs`) and the
   per-output causes (`.failures`) — the operation itself succeeded, so do not re-run it. `invoke()` has
   side effects even if you ignore its return value.
+- An argument that cannot be applied to its operation variable (a value of the wrong type such as `'abc'` for an
+  `xs:int` input, or a non-`ElementReference` for an output-only argument) raises `InvalidArgumentError` before the
+  operation is invoked, so the operation did not run; fix the argument and call again. It is also a `ValueError`.
+  Errors from reading a reference argument remotely are raised as they are (`MDTException`).
 - Failure raises `OperationError`. The sync call asks the server for a 7-day limit and waits
   that long (plus `fa3st.DEFAULT_TIMEOUT`) for the HTTP response. If no response arrives in time
   it raises `mdtpy.TimeoutError`: the outcome is unknown and the operation may still be running,
@@ -347,7 +351,8 @@ MDTException (all carry .details)
 ├── ResourceAlreadyExistsError
 ├── InvalidResourceStateError    # op not allowed in current twin state (e.g. not RUNNING)
 ├── OperationError               # operation invocation returned failure
-├── RemoteError                  # other server-side error
+├── InvalidArgumentError         # argument could not be applied; the operation was NOT invoked (also ValueError)
+├── RemoteError                  # other server-side error; .status_code = HTTP status when built from a response
 ├── MDTInstanceConnectionError   # could not connect: the request never reached the server (.cause)
 │   └── ConnectionLostError      # connected, then lost while awaiting the response (also ResultUnknownError)
 ├── ResultUnknownError           # request sent but outcome unknown — check server state before resending

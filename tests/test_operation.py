@@ -6,6 +6,7 @@ mdtpy.operation 모듈의 클래스/함수에 대한 단위 테스트.
                                      invoke 성공/실패 흐름
     - OperationSubmodelService     : input_arg_descs/output_arg_desc_dict 구성, invoke 흐름,
                                      출력 ElementReference 업데이트
+    - parse_argument_json_node     : 타입 태그에 따른 JSON 노드 변환
 
 기본 노선: HTTP·SubmodelService 의존을 unittest.mock으로 차단.
 """
@@ -22,11 +23,13 @@ from mdtpy.descriptor import (
     MDTOperationDescriptor,
     MDTSubmodelDescriptor,
 )
-from mdtpy.exceptions import OperationError
+from mdtpy.exceptions import InvalidArgumentError, OperationError, ResourceNotFoundError
 from mdtpy.operation import (
     AASOperationService,
     OperationSubmodelService,
+    parse_argument_json_node,
 )
+from mdtpy.value import FileValue
 from mdtpy.ref import ElementReference
 from mdtpy.submodel import SubmodelService
 
@@ -349,3 +352,73 @@ class TestOperationSubmodelServiceInvoke:
         svc.invoke(foo=ref)
 
         ref.update_value.assert_called_once_with(1)
+
+
+# --------------------------------------------------------------------------- #
+# parse_argument_json_node  (인자·값 JSON 노드 → 파이썬 객체)
+# --------------------------------------------------------------------------- #
+
+class TestParseArgumentJsonNode:
+    @pytest.mark.parametrize("node", [42, 1.5, "param:inst1:Temp", None, [1, 2]])
+    def test_non_dict_is_returned_as_is(self, node):
+        # 참조 접두어로 시작하는 문자열도 변환하지 않는다(문자열 값과 구분할 수 없으므로).
+        assert parse_argument_json_node(node) == node
+
+    def test_dict_without_type_tag_is_returned_as_is(self):
+        node = {"content_type": "image/png", "value": "a.png"}
+        assert parse_argument_json_node(node) is node
+
+    def test_model_type_becomes_submodel_element(self):
+        node = {"modelType": "Property", "idShort": "p", "valueType": "xs:int", "value": "3"}
+        sme = parse_argument_json_node(node)
+        assert isinstance(sme, model.Property) and sme.value == 3
+
+    def test_value_type_tag_becomes_element_value(self):
+        node = FileValue(content_type="text/plain", value="a.txt").to_json_node()
+        assert parse_argument_json_node(node) == FileValue(content_type="text/plain", value="a.txt")
+
+    def test_ref_type_tag_delegates_to_manager(self):
+        from mdtpy import instance as instance_mod
+        fake_ref = object()
+        mgr = MagicMock()
+        mgr.from_reference_json.return_value = fake_ref
+        instance_mod.mdt_manager = mgr  # conftest 가 테스트 후 원복한다.
+
+        node = {"@type": "mdt:ref:element",
+                "submodelReference": {"instanceId": "inst1", "submodelIdShort": "Data"},
+                "elementPath": "A.B"}
+        assert parse_argument_json_node(node) is fake_ref
+
+    def test_unknown_type_tag_is_rejected(self):
+        with pytest.raises(ValueError, match="Unknown @type: mdt:unknown"):
+            parse_argument_json_node({"@type": "mdt:unknown"})
+
+
+# --------------------------------------------------------------------------- #
+# InvalidArgumentError  (연산을 호출하기 전, 인자를 적용하지 못한 경우)
+# --------------------------------------------------------------------------- #
+
+class TestInvalidArgumentError:
+    def _int_operation_service(self):
+        """xs:int 입력 인자 'n' 하나를 가진 AASOperationService. 서브모델 서비스는 mock."""
+        op = model.Operation("Op", input_variable=[model.Property("n", model.datatypes.Int, 1)])
+        submodel_svc = MagicMock(spec=SubmodelService)
+        submodel_svc.submodel_elements = {"Op": op}
+        return AASOperationService(submodel_svc, "Op"), submodel_svc
+
+    @pytest.mark.parametrize("bad_value", ["abc", {"a": 1}, [1, 2]])
+    def test_wrong_typed_input_is_rejected_before_invoking(self, bad_value):
+        svc, submodel_svc = self._int_operation_service()
+        with pytest.raises(InvalidArgumentError) as info:
+            svc.invoke(n=bad_value)
+        assert info.value.argument_id == "n" and "'n'" in str(info.value)
+        assert isinstance(info.value, ValueError)            # except ValueError 로도 잡힌다
+        submodel_svc.invoke_operation_sync.assert_not_called()
+
+    def test_remote_error_while_reading_input_reference_is_not_wrapped(self):
+        svc, submodel_svc = self._int_operation_service()
+        ref = MagicMock(spec=ElementReference)
+        ref.read_value.side_effect = ResourceNotFoundError("input reference not found")
+        with pytest.raises(ResourceNotFoundError):
+            svc.invoke(n=ref)
+        submodel_svc.invoke_operation_sync.assert_not_called()
