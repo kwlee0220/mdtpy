@@ -28,6 +28,7 @@ class MDTAssetType(Enum):
     Process = "Process"
     Line = "Line"
     Factory = "Factory"
+    Material = "Material"
 
 
 class AssetKind(Enum):

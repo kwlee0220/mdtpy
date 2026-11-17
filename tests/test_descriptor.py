@@ -66,6 +66,7 @@ class TestMDTAssetTypeEnum:
             ("Process", "Process"),
             ("Line", "Line"),
             ("Factory", "Factory"),
+            ("Material", "Material"),
         ],
     )
     def test_pascal_case_values_match_server_format(self, name, value):

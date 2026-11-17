@@ -110,8 +110,8 @@ manager.instances.remove('new_id')             # or: del manager.instances['new_
 Note: user input interpolated into filter strings is not escaped by mdtpy — be careful.
 
 `MDTInstance` — cheap descriptor-backed properties (no HTTP):
-`id`, `aas_id`, `aas_id_short`, `global_asset_id`, `asset_type` (`MDTAssetType`, e.g.
-Machine/Process), `status` (`MDTInstanceStatus`), `base_endpoint`, `is_running()`.
+`id`, `aas_id`, `aas_id_short`, `global_asset_id`, `asset_type` (`MDTAssetType`:
+Machine/Process/Line/Factory/Material), `status` (`MDTInstanceStatus`), `base_endpoint`, `is_running()`.
 `status`/`base_endpoint` change over time — call `reload_descriptor()` for a fresh view;
 do not cache them.
 
@@ -340,7 +340,7 @@ ref = svc.element_reference(path)              # -> BaseElementReference
 Classification helpers on `SubmodelService` (driven by semantic id): `is_data()`,
 `is_information_model()`, `is_simulation()`, `is_ai()`, `is_time_series()`.
 Path convention for parameter values inside the `Data` submodel:
-Machine twins → `DataInfo.Equipment.EquipmentParameterValues[i].ParameterValue`,
+Machine and Material twins → `DataInfo.Equipment.EquipmentParameterValues[i].ParameterValue`,
 Process twins → `DataInfo.Operation.OperationParameterValues[i].ParameterValue`.
 
 ## 1.11 Exceptions
