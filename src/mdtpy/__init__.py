@@ -1,4 +1,4 @@
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 # SSL 인증서 검증 경고 억제
 import urllib3
